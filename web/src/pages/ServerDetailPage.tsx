@@ -258,16 +258,28 @@ export function ServerDetailPage() {
 
             {server.latestSnapshot ? (
               upgradablePackages.length > 0 ? (
-                <div className="package-list">
-                  {upgradablePackages.map((line) => {
-                    const [name, ...rest] = line.split(" ");
-                    return (
-                      <article key={line} className="package-item">
-                        <strong className="package-name">{name}</strong>
-                        <p className="package-meta">{rest.join(" ")}</p>
-                      </article>
-                    );
-                  })}
+                <div className="terminal-shell" role="presentation">
+                  <div className="terminal-header">
+                    <div className="terminal-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                    <strong>apt list --upgradable</strong>
+                  </div>
+
+                  <div className="terminal-body">
+                    <div className="terminal-line">
+                      <span className="terminal-prompt">$</span>
+                      <span className="terminal-command">apt list --upgradable</span>
+                    </div>
+                    <div className="terminal-output muted">Listing...</div>
+                    {upgradablePackages.map((line) => (
+                      <div key={line} className="terminal-output">
+                        {line}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="empty-state">

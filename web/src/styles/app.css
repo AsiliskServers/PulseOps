@@ -667,29 +667,82 @@ pre {
   line-height: 1.7;
 }
 
-.package-list {
+.terminal-shell {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #0f2232;
+  background: #101e2c;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #172938;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #d7e5f2;
+  font-size: 12px;
+}
+
+.terminal-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.terminal-dots span:nth-child(1) {
+  background: #f87171;
+}
+
+.terminal-dots span:nth-child(2) {
+  background: #fbbf24;
+}
+
+.terminal-dots span:nth-child(3) {
+  background: #4ade80;
+}
+
+.terminal-body {
+  padding: 16px;
   display: grid;
+  gap: 8px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #edf4fa;
+}
+
+.terminal-line {
+  display: flex;
+  align-items: baseline;
   gap: 10px;
 }
 
-.package-item {
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--surface-soft);
+.terminal-prompt {
+  color: #7dd3fc;
+  font-weight: 700;
 }
 
-.package-name {
-  display: block;
-  font-size: 13px;
-  line-height: 1.45;
+.terminal-command {
+  color: #f8fafc;
 }
 
-.package-meta {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.65;
+.terminal-output {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminal-output.muted {
+  color: #94a9bb;
 }
 
 .server-badge,
