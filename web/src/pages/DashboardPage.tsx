@@ -74,7 +74,7 @@ function MetricCard({
   return (
     <article className={`metric-card accent-${tone}`}>
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong className="metric-value">{value}</strong>
     </article>
   );
 }
@@ -121,15 +121,21 @@ function InstallationPanel({
       <div className="installer-grid">
         <article className="detail-card">
           <span>URL</span>
-          <strong>{enrollment?.publicUrl ?? "--"}</strong>
+          <strong className="detail-value detail-value-mono">
+            {enrollment?.publicUrl ?? "--"}
+          </strong>
         </article>
         <article className="detail-card">
           <span>Rapport</span>
-          <strong>{enrollment ? `${enrollment.reportIntervalSeconds}s` : "--"}</strong>
+          <strong className="detail-value">
+            {enrollment ? `${enrollment.reportIntervalSeconds}s` : "--"}
+          </strong>
         </article>
         <article className="detail-card">
           <span>Polling</span>
-          <strong>{enrollment ? `${enrollment.jobPollIntervalSeconds}s` : "--"}</strong>
+          <strong className="detail-value">
+            {enrollment ? `${enrollment.jobPollIntervalSeconds}s` : "--"}
+          </strong>
         </article>
       </div>
 
@@ -358,25 +364,25 @@ export function DashboardPage() {
           />
         </section>
 
-        <section className="summary-bar panel section-block">
-          <div>
-            <p className="section-kicker">Resume</p>
-            <h3>Etat global</h3>
-          </div>
-          <div className="summary-inline">
-            <span>Check: {formatDate(summaryQuery.data?.lastGlobalCheckAt)}</span>
-            <span>Stale: {summaryQuery.data?.staleCount ?? 0}</span>
-            <span>Offline: {summaryQuery.data?.offlineCount ?? 0}</span>
-          </div>
-        </section>
+        <section className="overview-grid section-block">
+          <section className="summary-bar panel">
+            <div>
+              <p className="section-kicker">Resume</p>
+              <h3>Etat global</h3>
+            </div>
+            <div className="summary-inline">
+              <span>Check: {formatDate(summaryQuery.data?.lastGlobalCheckAt)}</span>
+              <span>Stale: {summaryQuery.data?.staleCount ?? 0}</span>
+              <span>Offline: {summaryQuery.data?.offlineCount ?? 0}</span>
+            </div>
+          </section>
 
-        <div className="section-block">
           <InstallationPanel
             enrollment={enrollmentQuery.data}
             pending={rotateEnrollmentMutation.isPending}
             onRotate={() => rotateEnrollmentMutation.mutate()}
           />
-        </div>
+        </section>
 
         {serversQuery.data && serversQuery.data.length === 0 ? (
           <section className="empty-hero panel section-block">
@@ -472,30 +478,34 @@ export function DashboardPage() {
                   <div className="detail-hero">
                     <div>
                       <p className="detail-label">Nom machine</p>
-                      <strong>{selectedServer.hostname ?? "--"}</strong>
+                      <strong className="detail-hero-value">{selectedServer.hostname ?? "--"}</strong>
                     </div>
                     <div>
                       <p className="detail-label">Derniere vue</p>
-                      <strong>{formatDate(selectedServer.lastSeenAt)}</strong>
+                      <strong className="detail-hero-value">{formatDate(selectedServer.lastSeenAt)}</strong>
                     </div>
                     <div>
                       <p className="detail-label">Version agent</p>
-                      <strong>{selectedServer.agentVersion ?? "--"}</strong>
+                      <strong className="detail-hero-value">{selectedServer.agentVersion ?? "--"}</strong>
                     </div>
                   </div>
 
                   <div className="detail-grid">
                     <article className="detail-card">
                       <span>Maj en attente</span>
-                      <strong>{selectedServer.latestSnapshot?.upgradableCount ?? 0}</strong>
+                      <strong className="detail-value">
+                        {selectedServer.latestSnapshot?.upgradableCount ?? 0}
+                      </strong>
                     </article>
                     <article className="detail-card">
                       <span>Dernier report</span>
-                      <strong>{formatDate(selectedServer.lastReportAt)}</strong>
+                      <strong className="detail-value detail-value-date">
+                        {formatDate(selectedServer.lastReportAt)}
+                      </strong>
                     </article>
                     <article className="detail-card">
                       <span>Jobs</span>
-                      <strong>{selectedServer.pendingJobsCount}</strong>
+                      <strong className="detail-value">{selectedServer.pendingJobsCount}</strong>
                     </article>
                   </div>
 

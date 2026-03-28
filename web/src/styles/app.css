@@ -75,6 +75,12 @@ button:disabled {
   margin-top: 22px;
 }
 
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1.28fr);
+  gap: 20px;
+}
+
 .fullscreen-shell {
   min-height: 100vh;
   display: grid;
@@ -338,9 +344,27 @@ button:disabled {
 .detail-card strong {
   display: block;
   margin-top: 8px;
-  font-size: 1.38rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.2;
+}
+
+.metric-value {
+  font-size: 1.28rem !important;
+}
+
+.detail-value {
+  font-size: 1.02rem !important;
+}
+
+.detail-value-date,
+.detail-value-mono {
+  font-size: 0.86rem !important;
+  line-height: 1.45;
+}
+
+.detail-value-mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 .accent-neutral {
@@ -364,6 +388,7 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   gap: 24px;
+  min-height: 100%;
 }
 
 .summary-inline {
@@ -497,6 +522,10 @@ button:disabled {
   line-height: 1.2;
 }
 
+.panel h3 {
+  font-size: 1.05rem;
+}
+
 .server-stats {
   display: flex;
   gap: 10px;
@@ -546,6 +575,13 @@ button:disabled {
   border-radius: 16px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
+}
+
+.detail-hero-value {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.94rem;
+  line-height: 1.4;
 }
 
 .detail-grid {
@@ -675,7 +711,8 @@ pre {
   .login-panel,
   .topbar,
   .content-grid,
-  .summary-bar {
+  .summary-bar,
+  .overview-grid {
     grid-template-columns: 1fr;
   }
 
