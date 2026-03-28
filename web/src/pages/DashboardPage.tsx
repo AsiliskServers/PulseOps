@@ -335,7 +335,7 @@ export function DashboardPage() {
       <main>
         {topError ? <div className="alert error">{topError}</div> : null}
 
-        <section className="metrics-grid" aria-label="Key metrics">
+        <section className="metrics-grid section-block" aria-label="Key metrics">
           <MetricCard
             label="Serveurs"
             value={summaryQuery.data?.serverCount ?? 0}
@@ -358,7 +358,7 @@ export function DashboardPage() {
           />
         </section>
 
-        <section className="summary-bar panel">
+        <section className="summary-bar panel section-block">
           <div>
             <p className="section-kicker">Resume</p>
             <h3>Etat global</h3>
@@ -370,20 +370,22 @@ export function DashboardPage() {
           </div>
         </section>
 
-        <InstallationPanel
-          enrollment={enrollmentQuery.data}
-          pending={rotateEnrollmentMutation.isPending}
-          onRotate={() => rotateEnrollmentMutation.mutate()}
-        />
+        <div className="section-block">
+          <InstallationPanel
+            enrollment={enrollmentQuery.data}
+            pending={rotateEnrollmentMutation.isPending}
+            onRotate={() => rotateEnrollmentMutation.mutate()}
+          />
+        </div>
 
         {serversQuery.data && serversQuery.data.length === 0 ? (
-          <section className="empty-hero panel">
+          <section className="empty-hero panel section-block">
             <p className="section-kicker">Serveurs</p>
             <h3>Aucun serveur pour le moment</h3>
             <p>Lance la commande d&apos;installation ci-dessus sur un serveur Debian 13.</p>
           </section>
         ) : (
-          <section className="content-grid">
+          <section className="content-grid section-block">
             <div className="panel server-panel">
               <div className="panel-header">
                 <div>
