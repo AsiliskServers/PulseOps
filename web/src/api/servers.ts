@@ -1,0 +1,56 @@
+import { fetchJson } from "./client";
+import type { DashboardSummary, Job, ServerDetail, ServerPayload, ServerSummary } from "../types";
+
+export async function getSummary(): Promise<DashboardSummary> {
+  return fetchJson<DashboardSummary>("/dashboard/summary");
+}
+
+export async function listServers(): Promise<ServerSummary[]> {
+  const payload = await fetchJson<{ servers: ServerSummary[] }>("/servers");
+  return payload.servers;
+}
+
+export async function getServer(id: string): Promise<ServerDetail> {
+  const payload = await fetchJson<{ server: ServerDetail }>(`/servers/${id}`);
+  return payload.server;
+}
+
+export async function createServer(input: ServerPayload): Promise<ServerSummary> {
+  const payload = await fetchJson<{ server: ServerSummary }>("/servers", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+  return payload.server;
+}
+
+export async function updateServer(id: string, input: ServerPayload): Promise<ServerSummary> {
+  const payload = await fetchJson<{ server: ServerSummary }>(`/servers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+
+  return payload.server;
+}
+
+export async function deleteServer(id: string): Promise<void> {
+  await fetchJson<void>(`/servers/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function triggerRefresh(id: string): Promise<Job> {
+  const payload = await fetchJson<{ job: Job }>(`/servers/${id}/refresh`, {
+    method: "POST",
+  });
+
+  return payload.job;
+}
+
+export async function triggerUpgrade(id: string): Promise<Job> {
+  const payload = await fetchJson<{ job: Job }>(`/servers/${id}/upgrade`, {
+    method: "POST",
+  });
+
+  return payload.job;
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.vite/
+.turbo/
+.env
+.env.local
+.env.*.local
+server/prisma/dev.db
+server/prisma/dev.db-journal
+coverage/
+npm-debug.log*
+*.tsbuildinfo
