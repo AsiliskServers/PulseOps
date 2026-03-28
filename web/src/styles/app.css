@@ -36,6 +36,8 @@ body {
   background: linear-gradient(180deg, #faf7f4 0%, var(--bg) 100%);
   color: var(--text);
   font-family: var(--body-font);
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 h1,
@@ -64,7 +66,7 @@ button:disabled {
 .page-shell {
   width: min(1420px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 28px 0 48px;
+  padding: 32px 0 56px;
 }
 
 .fullscreen-shell {
@@ -115,14 +117,14 @@ button:disabled {
 }
 
 .login-copy h1 {
-  font-size: clamp(2.2rem, 4vw, 3.8rem);
-  line-height: 1.02;
+  font-size: clamp(2rem, 3.6vw, 3.2rem);
+  line-height: 1.05;
 }
 
 .login-copy p {
   max-width: 60ch;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
 .login-card {
@@ -188,8 +190,8 @@ button:disabled {
 .section-kicker,
 .detail-label {
   margin: 0;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -226,7 +228,7 @@ button:disabled {
 
 .topbar-copy {
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 
 .topbar-actions,
@@ -267,7 +269,7 @@ button:disabled {
 .primary-button,
 .ghost-button {
   cursor: pointer;
-  padding: 11px 16px;
+  padding: 10px 14px;
   transition:
     background-color 140ms ease,
     border-color 140ms ease,
@@ -276,7 +278,7 @@ button:disabled {
 }
 
 .ghost-button.small {
-  padding: 8px 12px;
+  padding: 7px 10px;
 }
 
 .ghost-button.danger {
@@ -310,12 +312,13 @@ button:disabled {
 
 .metrics-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 24px;
+  margin-top: 26px;
+  gap: 18px;
 }
 
 .metric-card {
   min-width: 0;
-  padding: 20px 22px;
+  padding: 18px 20px;
   border-radius: 14px;
 }
 
@@ -323,14 +326,14 @@ button:disabled {
 .detail-card span {
   display: block;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
 }
 
 .metric-card strong,
 .detail-card strong {
   display: block;
-  margin-top: 10px;
-  font-size: 1.8rem;
+  margin-top: 8px;
+  font-size: 1.55rem;
   font-weight: 700;
   line-height: 1.15;
 }
@@ -352,7 +355,7 @@ button:disabled {
 }
 
 .summary-bar {
-  margin-top: 18px;
+  margin-top: 22px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -364,7 +367,7 @@ button:disabled {
   gap: 12px;
   flex-wrap: wrap;
   color: var(--muted);
-  font-size: 0.94rem;
+  font-size: 0.85rem;
 }
 
 .summary-inline span {
@@ -376,14 +379,19 @@ button:disabled {
 
 .content-grid {
   grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.9fr);
-  margin-top: 20px;
+  margin-top: 24px;
+  gap: 20px;
 }
 
 .panel,
 .fullscreen-card {
   min-width: 0;
-  padding: 24px;
+  padding: 26px;
   border-radius: 16px;
+}
+
+.installer-panel {
+  margin-top: 22px;
 }
 
 .panel-header,
@@ -399,12 +407,12 @@ button:disabled {
 }
 
 .panel-header {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .panel-header.compact,
 .detail-section-header {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .search-field {
@@ -420,7 +428,7 @@ button:disabled {
 
 .search-field span {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .search-field input {
@@ -432,7 +440,7 @@ button:disabled {
 .server-list,
 .job-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .server-card,
@@ -448,8 +456,8 @@ button:disabled {
 
 .server-card {
   display: grid;
-  gap: 14px;
-  padding: 18px 18px 16px;
+  gap: 16px;
+  padding: 18px;
   cursor: pointer;
   transition:
     transform 140ms ease,
@@ -477,6 +485,18 @@ button:disabled {
 .fullscreen-card p {
   margin: 0;
   color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.server-card h4,
+.detail-section h4,
+.job-card strong,
+.empty-hero h3,
+.fullscreen-card h1,
+.panel h3,
+.login-copy h2,
+.topbar h1 {
+  line-height: 1.2;
 }
 
 .server-stats {
@@ -487,8 +507,8 @@ button:disabled {
 
 .status-pill,
 .server-badge {
-  padding: 7px 11px;
-  font-size: 0.84rem;
+  padding: 6px 10px;
+  font-size: 0.78rem;
   line-height: 1.2;
 }
 
@@ -532,12 +552,14 @@ button:disabled {
 
 .detail-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 16px;
+  margin-top: 18px;
+  gap: 14px;
 }
 
 .installer-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 14px;
+  margin-top: 16px;
+  gap: 14px;
 }
 
 .detail-card,
@@ -548,7 +570,7 @@ button:disabled {
 }
 
 .detail-section {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .detail-section-header span,
@@ -566,7 +588,7 @@ pre {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.55;
-  font-size: 0.92rem;
+  font-size: 0.84rem;
 }
 
 .job-card p,
@@ -603,7 +625,7 @@ pre {
 }
 
 .empty-hero {
-  margin-top: 18px;
+  margin-top: 24px;
   display: grid;
   gap: 10px;
   justify-items: start;
@@ -638,7 +660,7 @@ pre {
 
 .server-form {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   margin-top: 18px;
 }
 
