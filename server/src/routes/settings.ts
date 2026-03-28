@@ -1,0 +1,49 @@
+import type { FastifyInstance } from "fastify";
+import type { ServerEnv } from "../lib/env.js";
+import { requireSessionUser } from "../lib/session.js";
+import { getEnrollmentToken, rotateEnrollmentToken } from "../services/settings.js";
+
+function buildInstallCommand(publicUrl: string, token: string) {
+  return `curl -fsSL ${publicUrl}/install-agent.sh | bash -s -- --server-url ${publicUrl} --enrollment-token ${token} --environment production`;
+}
+
+export async function registerSettingsRoutes(
+  app: FastifyInstance,
+  env: ServerEnv
+): Promise<void> {
+  app.get("/enrollment", async (request, reply) => {
+    const user = await requireSessionUser(request, reply);
+
+    if (!user) {
+      return;
+    }
+
+    const token = await getEnrollmentToken(env);
+
+    return reply.send({
+      enrollmentToken: token,
+      publicUrl: env.appPublicUrl,
+      reportIntervalSeconds: env.agentReportIntervalSeconds,
+      jobPollIntervalSeconds: env.agentJobPollIntervalSeconds,
+      installCommand: buildInstallCommand(env.appPublicUrl, token),
+    });
+  });
+
+  app.post("/enrollment/rotate", async (request, reply) => {
+    const user = await requireSessionUser(request, reply);
+
+    if (!user) {
+      return;
+    }
+
+    const token = await rotateEnrollmentToken(env);
+
+    return reply.send({
+      enrollmentToken: token,
+      publicUrl: env.appPublicUrl,
+      reportIntervalSeconds: env.agentReportIntervalSeconds,
+      jobPollIntervalSeconds: env.agentJobPollIntervalSeconds,
+      installCommand: buildInstallCommand(env.appPublicUrl, token),
+    });
+  });
+}

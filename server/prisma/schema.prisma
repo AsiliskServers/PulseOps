@@ -16,18 +16,32 @@ model User {
   jobs         Job[]
 }
 
+model AppSetting {
+  id                       String   @id
+  enrollmentTokenEncrypted String
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
 model Server {
-  id                  String           @id @default(cuid())
-  name                String
-  environment         String
-  agentBaseUrl        String
-  agentTokenEncrypted String
-  notes               String?
-  isActive            Boolean          @default(true)
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
-  snapshots           ServerSnapshot[]
-  jobs                Job[]
+  id                   String           @id @default(cuid())
+  name                 String
+  environment          String
+  notes                String?
+  isActive             Boolean          @default(true)
+  agentId              String?          @unique
+  agentSecretEncrypted String?
+  hostname             String?
+  osName               String?
+  osVersion            String?
+  agentVersion         String?
+  lastSeenAt           DateTime?
+  lastReportAt         DateTime?
+  connectivityStatus   String           @default("offline")
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  snapshots            ServerSnapshot[]
+  jobs                 Job[]
 }
 
 model ServerSnapshot {
@@ -38,6 +52,7 @@ model ServerSnapshot {
   securityCount   Int
   rebootRequired  Boolean
   lastCheckAt     DateTime
+  outputPreview   String
   rawSummaryJson  String
   createdAt       DateTime @default(now())
   server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
@@ -50,6 +65,7 @@ model Job {
   serverId          String
   type              String
   status            String
+  claimedAt         DateTime?
   startedAt         DateTime?
   finishedAt        DateTime?
   outputPreview     String?
@@ -61,4 +77,5 @@ model Job {
   triggeredByUser   User     @relation(fields: [triggeredByUserId], references: [id], onDelete: Cascade)
 
   @@index([serverId, createdAt])
+  @@index([status, createdAt])
 }

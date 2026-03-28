@@ -4,14 +4,13 @@
   "version": "1.0.0",
   "workspaces": [
     "web",
-    "server",
-    "agent"
+    "server"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace web",
     "dev:server": "npm run dev --workspace server",
-    "dev:agent": "npm run dev --workspace agent",
-    "build": "npm run build --workspace web && npm run build --workspace server && npm run build --workspace agent",
-    "lint": "npm run lint --workspace web && npm run lint --workspace server && npm run lint --workspace agent"
+    "build:agent": "powershell -ExecutionPolicy Bypass -File ./agent/scripts/build-release.ps1",
+    "build": "npm run build --workspace web && npm run build --workspace server",
+    "lint": "npm run lint --workspace web && npm run lint --workspace server"
   }
 }

@@ -1,14 +1,15 @@
 [Unit]
-Description=PulseOps Debian Update Agent
-After=network.target
+Description=PulseOps outbound agent
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/pulseops-agent
-ExecStart=/usr/bin/node /opt/pulseops-agent/dist/index.js
+EnvironmentFile=/opt/pulseops-agent/pulseops-agent.env
+ExecStart=/opt/pulseops-agent/pulseops-agent run --config /opt/pulseops-agent/pulseops-agent.env
 Restart=always
 RestartSec=5
-EnvironmentFile=/opt/pulseops-agent/.env
 
 [Install]
 WantedBy=multi-user.target

@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { encryptSecret } from "../lib/encryption.js";
 import { requireSessionUser } from "../lib/session.js";
 import {
   isRecord,
@@ -8,17 +7,16 @@ import {
   readOptionalString,
   readRequiredString,
   validateEnvironment,
-  validateUrl,
+  normalizeJobType,
 } from "../lib/validators.js";
-import { JobRunner } from "../services/job-runner.js";
-import {
-  getServerDetailInclude,
-  getServerSummaryInclude,
-  serializeJob,
-  serializeServerDetail,
-  serializeServerSummary,
-} from "../services/server-read-models.js";
 import type { ServerEnv } from "../lib/env.js";
+import {
+  serializeJob,
+  serializeServer,
+  serializeServerDetail,
+  serverDetailInclude,
+  serverListInclude,
+} from "../services/serializers.js";
 
 function parseCreatePayload(body: unknown) {
   if (!isRecord(body)) {
@@ -28,8 +26,6 @@ function parseCreatePayload(body: unknown) {
   return {
     name: readRequiredString(body, "name", "name"),
     environment: validateEnvironment(readRequiredString(body, "environment", "environment")),
-    agentBaseUrl: validateUrl(readRequiredString(body, "agentBaseUrl", "agentBaseUrl")),
-    agentToken: readRequiredString(body, "agentToken", "agentToken"),
     notes: readOptionalString(body, "notes"),
     isActive: readOptionalBoolean(body, "isActive") ?? true,
   };
@@ -41,13 +37,10 @@ function parseUpdatePayload(body: unknown) {
   }
 
   const environment = readOptionalString(body, "environment");
-  const agentBaseUrl = readOptionalString(body, "agentBaseUrl");
 
   return {
     name: readOptionalString(body, "name"),
     environment: environment ? validateEnvironment(environment) : undefined,
-    agentBaseUrl: agentBaseUrl ? validateUrl(agentBaseUrl) : undefined,
-    agentToken: readOptionalString(body, "agentToken"),
     notes:
       typeof body.notes === "string" ? body.notes.trim() || null : undefined,
     isActive: readOptionalBoolean(body, "isActive"),
@@ -56,9 +49,19 @@ function parseUpdatePayload(body: unknown) {
 
 export async function registerServerRoutes(
   app: FastifyInstance,
-  env: ServerEnv,
-  jobRunner: JobRunner
+  env: ServerEnv
 ): Promise<void> {
+  async function queueJob(serverId: string, triggeredByUserId: string, type: "refresh" | "upgrade") {
+    return prisma.job.create({
+      data: {
+        serverId,
+        type,
+        status: "queued",
+        triggeredByUserId,
+      },
+    });
+  }
+
   app.get("/", async (request, reply) => {
     const user = await requireSessionUser(request, reply);
 
@@ -66,15 +69,34 @@ export async function registerServerRoutes(
       return;
     }
 
-    const servers = await prisma.server.findMany({
-      orderBy: {
-        createdAt: "asc",
-      },
-      include: getServerSummaryInclude(),
-    });
+    const [servers, pendingJobs] = await Promise.all([
+      prisma.server.findMany({
+        orderBy: {
+          createdAt: "asc",
+        },
+        include: serverListInclude,
+      }),
+      prisma.job.groupBy({
+        by: ["serverId"],
+        where: {
+          status: {
+            in: ["queued", "claimed", "running"],
+          },
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+    ]);
+
+    const pendingCountByServer = new Map(
+      pendingJobs.map((item) => [item.serverId, item._count._all])
+    );
 
     return reply.send({
-      servers: servers.map((server) => serializeServerSummary(server)),
+      servers: servers.map((server) =>
+        serializeServer(server, env, pendingCountByServer.get(server.id) ?? 0)
+      ),
     });
   });
 
@@ -87,20 +109,18 @@ export async function registerServerRoutes(
 
     try {
       const payload = parseCreatePayload(request.body);
-      const created = await prisma.server.create({
+      const server = await prisma.server.create({
         data: {
           name: payload.name,
           environment: payload.environment,
-          agentBaseUrl: payload.agentBaseUrl,
-          agentTokenEncrypted: encryptSecret(payload.agentToken, env.encryptionKey),
           notes: payload.notes,
           isActive: payload.isActive,
         },
-        include: getServerSummaryInclude(),
+        include: serverListInclude,
       });
 
       return reply.status(201).send({
-        server: serializeServerSummary(created),
+        server: serializeServer(server, env),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create server";
@@ -115,19 +135,30 @@ export async function registerServerRoutes(
       return;
     }
 
-    const server = await prisma.server.findUnique({
-      where: {
-        id: String((request.params as { id: string }).id),
-      },
-      include: getServerDetailInclude(),
-    });
+    const serverId = String((request.params as { id: string }).id);
+    const [server, pendingJobsCount] = await Promise.all([
+      prisma.server.findUnique({
+        where: {
+          id: serverId,
+        },
+        include: serverDetailInclude,
+      }),
+      prisma.job.count({
+        where: {
+          serverId,
+          status: {
+            in: ["queued", "claimed", "running"],
+          },
+        },
+      }),
+    ]);
 
     if (!server) {
       return reply.status(404).send({ message: "Server not found" });
     }
 
     return reply.send({
-      server: serializeServerDetail(server),
+      server: serializeServerDetail(server, env, pendingJobsCount),
     });
   });
 
@@ -139,15 +170,6 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const existingServer = await prisma.server.findUnique({
-      where: {
-        id: serverId,
-      },
-    });
-
-    if (!existingServer) {
-      return reply.status(404).send({ message: "Server not found" });
-    }
 
     try {
       const payload = parseUpdatePayload(request.body);
@@ -158,22 +180,19 @@ export async function registerServerRoutes(
         data: {
           name: payload.name,
           environment: payload.environment,
-          agentBaseUrl: payload.agentBaseUrl,
-          agentTokenEncrypted: payload.agentToken
-            ? encryptSecret(payload.agentToken, env.encryptionKey)
-            : undefined,
           notes: payload.notes,
           isActive: payload.isActive,
         },
-        include: getServerSummaryInclude(),
+        include: serverListInclude,
       });
 
       return reply.send({
-        server: serializeServerSummary(updated),
+        server: serializeServer(updated, env),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to update server";
-      return reply.status(400).send({ message });
+      const statusCode = message === "Record to update not found." ? 404 : 400;
+      return reply.status(statusCode).send({ message: statusCode === 404 ? "Server not found" : message });
     }
   });
 
@@ -204,7 +223,7 @@ export async function registerServerRoutes(
     return reply.status(204).send();
   });
 
-  app.post("/:id/refresh", async (request, reply) => {
+  app.post("/:id/jobs", async (request, reply) => {
     const user = await requireSessionUser(request, reply);
 
     if (!user) {
@@ -222,20 +241,39 @@ export async function registerServerRoutes(
       return reply.status(404).send({ message: "Server not found" });
     }
 
-    const job = await prisma.job.create({
-      data: {
-        serverId,
-        type: "refresh",
-        status: "queued",
-        triggeredByUserId: user.id,
-      },
-    });
+    try {
+      if (!isRecord(request.body)) {
+        return reply.status(400).send({ message: "Invalid request body" });
+      }
 
-    jobRunner.enqueue(job.id);
+      const type = normalizeJobType(readRequiredString(request.body, "type", "type"));
+      const job = await queueJob(serverId, user.id, type);
 
-    return reply.status(202).send({
-      job: serializeJob(job),
-    });
+      return reply.status(202).send({
+        job: serializeJob(job),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to queue job";
+      return reply.status(400).send({ message });
+    }
+  });
+
+  app.post("/:id/refresh", async (request, reply) => {
+    const user = await requireSessionUser(request, reply);
+
+    if (!user) {
+      return;
+    }
+
+    const serverId = String((request.params as { id: string }).id);
+    const server = await prisma.server.findUnique({ where: { id: serverId } });
+
+    if (!server) {
+      return reply.status(404).send({ message: "Server not found" });
+    }
+
+    const job = await queueJob(serverId, user.id, "refresh");
+    return reply.status(202).send({ job: serializeJob(job) });
   });
 
   app.post("/:id/upgrade", async (request, reply) => {
@@ -246,30 +284,14 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const server = await prisma.server.findUnique({
-      where: {
-        id: serverId,
-      },
-    });
+    const server = await prisma.server.findUnique({ where: { id: serverId } });
 
     if (!server) {
       return reply.status(404).send({ message: "Server not found" });
     }
 
-    const job = await prisma.job.create({
-      data: {
-        serverId,
-        type: "upgrade",
-        status: "queued",
-        triggeredByUserId: user.id,
-      },
-    });
-
-    jobRunner.enqueue(job.id);
-
-    return reply.status(202).send({
-      job: serializeJob(job),
-    });
+    const job = await queueJob(serverId, user.id, "upgrade");
+    return reply.status(202).send({ job: serializeJob(job) });
   });
 
   app.get("/:id/jobs", async (request, reply) => {
@@ -297,11 +319,13 @@ export async function registerServerRoutes(
       orderBy: {
         createdAt: "desc",
       },
-      take: 20,
+      take: 50,
     });
 
     return reply.send({
-      jobs: jobs.map((job) => serializeJob(job)),
+      jobs: jobs
+        .map((job) => serializeJob(job))
+        .filter((job): job is NonNullable<typeof job> => job !== null),
     });
   });
 }

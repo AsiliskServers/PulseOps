@@ -2,11 +2,12 @@ import { buildApp } from "./app.js";
 import { loadEnv } from "./lib/env.js";
 import { prisma } from "./lib/prisma.js";
 import { ensureBootstrapAdmin } from "./services/bootstrap.js";
+import { ensureAppSettings } from "./services/settings.js";
 
 async function main() {
   const env = loadEnv();
 
-  await ensureBootstrapAdmin(env);
+  await Promise.all([ensureBootstrapAdmin(env), ensureAppSettings(env)]);
 
   const app = await buildApp(env);
 

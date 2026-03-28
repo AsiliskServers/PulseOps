@@ -457,7 +457,8 @@ button:disabled {
 
 .metrics-grid,
 .content-grid,
-.detail-grid {
+.detail-grid,
+.installer-grid {
   display: grid;
   gap: 18px;
 }
@@ -671,6 +672,11 @@ button:disabled {
   margin-top: 16px;
 }
 
+.installer-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
 .detail-card,
 .detail-section,
 .job-card,
@@ -826,6 +832,7 @@ pre {
   .metrics-grid,
   .detail-grid,
   .detail-hero,
+  .installer-grid,
   .login-metrics {
     grid-template-columns: 1fr;
   }

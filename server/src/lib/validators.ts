@@ -45,11 +45,6 @@ export function validateEnvironment(value: string): EnvironmentValue {
   return value as EnvironmentValue;
 }
 
-export function validateUrl(value: string): string {
-  const parsed = new URL(value);
-  return parsed.toString().replace(/\/$/, "");
-}
-
 export function normalizeJobType(value: string): JobType {
   if (value !== "refresh" && value !== "upgrade") {
     throw new Error("Invalid job type");

@@ -1,11 +1,10 @@
 import { useDeferredValue, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createServer, deleteServer, getServer, getSummary, listServers, triggerRefresh, triggerUpgrade, updateServer } from "../api/servers";
+import { deleteServer, getServer, getSummary, listServers, triggerRefresh, triggerUpgrade, updateServer } from "../api/servers";
 import { logout } from "../api/auth";
+import { getEnrollmentSettings, rotateEnrollmentSettings } from "../api/settings";
 import { ServerFormModal } from "../components/ServerFormModal";
-import type { Job, ServerDetail, ServerPayload, ServerSummary } from "../types";
-
-type FilterKey = "all" | "updated" | "pending" | "critical";
+import type { EnrollmentSettings, Job, ServerDetail, ServerPayload, ServerSummary } from "../types";
 
 function formatDate(value: string | null | undefined): string {
   if (!value) {
@@ -30,8 +29,16 @@ function resolveServerState(server: ServerSummary | ServerDetail): {
     return { label: "Jamais synchronise", tone: "neutral" };
   }
 
+  if (server.connectivityStatus === "offline") {
+    return { label: "Offline", tone: "critical" };
+  }
+
+  if (server.connectivityStatus === "stale") {
+    return { label: "Heartbeat stale", tone: "pending" };
+  }
+
   if (!server.latestSnapshot.reachable) {
-    return { label: "Agent injoignable", tone: "critical" };
+    return { label: "Report degrade", tone: "critical" };
   }
 
   if (server.latestSnapshot.securityCount > 0) {
@@ -43,24 +50,6 @@ function resolveServerState(server: ServerSummary | ServerDetail): {
   }
 
   return { label: "A jour", tone: "ok" };
-}
-
-function matchesFilter(server: ServerSummary, filter: FilterKey): boolean {
-  const state = resolveServerState(server);
-
-  if (filter === "all") {
-    return true;
-  }
-
-  if (filter === "updated") {
-    return state.tone === "ok";
-  }
-
-  if (filter === "pending") {
-    return state.tone === "pending";
-  }
-
-  return state.tone === "critical";
 }
 
 function findMutationError(errors: Array<unknown>): string | null {
@@ -93,6 +82,78 @@ function MetricCard({
   );
 }
 
+function InstallationPanel({
+  enrollment,
+  pending,
+  onRotate,
+}: {
+  enrollment: EnrollmentSettings | undefined;
+  pending: boolean;
+  onRotate: () => void;
+}) {
+  const [copied, setCopied] = useState<"command" | "token" | null>(null);
+
+  async function copyValue(value: string, kind: "command" | "token") {
+    await navigator.clipboard.writeText(value);
+    setCopied(kind);
+    window.setTimeout(() => setCopied(null), 1500);
+  }
+
+  return (
+    <section className="panel installer-panel">
+      <div className="panel-header">
+        <div>
+          <p className="section-kicker">Agent install</p>
+          <h3>One-liner d'enrollement Debian 13</h3>
+        </div>
+        <div className="panel-toolbar">
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => enrollment && void copyValue(enrollment.enrollmentToken, "token")}
+            disabled={!enrollment}
+          >
+            {copied === "token" ? "Token copie" : "Copier le token"}
+          </button>
+          <button className="ghost-button" type="button" onClick={onRotate} disabled={pending}>
+            {pending ? "Rotation..." : "Regenerer le token"}
+          </button>
+        </div>
+      </div>
+
+      <div className="installer-grid">
+        <article className="detail-card">
+          <span>Public URL</span>
+          <strong>{enrollment?.publicUrl ?? "--"}</strong>
+        </article>
+        <article className="detail-card">
+          <span>Report interval</span>
+          <strong>{enrollment ? `${enrollment.reportIntervalSeconds}s` : "--"}</strong>
+        </article>
+        <article className="detail-card">
+          <span>Job polling</span>
+          <strong>{enrollment ? `${enrollment.jobPollIntervalSeconds}s` : "--"}</strong>
+        </article>
+      </div>
+
+      <div className="detail-section">
+        <div className="detail-section-header">
+          <h4>Commande a lancer sur le serveur cible</h4>
+          <button
+            className="ghost-button small"
+            type="button"
+            onClick={() => enrollment && void copyValue(enrollment.installCommand, "command")}
+            disabled={!enrollment}
+          >
+            {copied === "command" ? "Commande copiee" : "Copier la commande"}
+          </button>
+        </div>
+        <pre>{enrollment?.installCommand ?? "Chargement de la commande d'installation..."}</pre>
+      </div>
+    </section>
+  );
+}
+
 function JobItem({ job }: { job: Job }) {
   return (
     <article className="job-card">
@@ -114,11 +175,14 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<FilterKey>("all");
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
 
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+
+  const enrollmentQuery = useQuery({
+    queryKey: ["enrollment"],
+    queryFn: getEnrollmentSettings,
+  });
 
   const summaryQuery = useQuery({
     queryKey: ["summary"],
@@ -156,18 +220,6 @@ export function DashboardPage() {
       setSelectedId(serversQuery.data[0].id);
     }
   }, [selectedId, serversQuery.data]);
-
-  const createMutation = useMutation({
-    mutationFn: (payload: ServerPayload) => createServer(payload),
-    onSuccess: async (server) => {
-      setModalOpen(false);
-      setSelectedId(server.id);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
-      ]);
-    },
-  });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: ServerPayload }) =>
@@ -218,25 +270,32 @@ export function DashboardPage() {
     mutationFn: logout,
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: ["session"] });
-      window.location.assign("/login");
+      window.location.assign("/pulseops/login");
+    },
+  });
+
+  const rotateEnrollmentMutation = useMutation({
+    mutationFn: rotateEnrollmentSettings,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enrollment"] });
     },
   });
 
   const filteredServers =
     serversQuery.data?.filter((server) => {
-      const haystack = `${server.name} ${server.environment} ${server.notes ?? ""}`.toLowerCase();
-      return haystack.includes(deferredSearch) && matchesFilter(server, filter);
+      const haystack = `${server.name} ${server.environment} ${server.notes ?? ""} ${server.hostname ?? ""} ${server.osName ?? ""}`.toLowerCase();
+      return haystack.includes(deferredSearch);
     }) ?? [];
 
   const selectedServer = detailQuery.data ?? null;
   const selectedState = selectedServer ? resolveServerState(selectedServer) : null;
   const mutationError = findMutationError([
-    createMutation.error,
     updateMutation.error,
     deleteMutation.error,
     refreshMutation.error,
     upgradeMutation.error,
     logoutMutation.error,
+    rotateEnrollmentMutation.error,
   ]);
 
   const topError =
@@ -245,6 +304,8 @@ export function DashboardPage() {
       ? serversQuery.error.message
       : summaryQuery.error instanceof Error
         ? summaryQuery.error.message
+        : enrollmentQuery.error instanceof Error
+          ? enrollmentQuery.error.message
         : detailQuery.error instanceof Error
           ? detailQuery.error.message
           : null);
@@ -261,20 +322,10 @@ export function DashboardPage() {
         </div>
 
         <div className="topbar-copy">
-          <span className="hero-chip">Empty by default. Ready for your first server.</span>
+          <span className="hero-chip">Outbound agents over https://app.asilisk.fr/pulseops</span>
         </div>
 
         <div className="topbar-actions">
-          <button
-            className="ghost-button"
-            type="button"
-            onClick={() => {
-              setModalMode("create");
-              setModalOpen(true);
-            }}
-          >
-            Ajouter un serveur
-          </button>
           <button
             className="primary-button"
             type="button"
@@ -289,40 +340,26 @@ export function DashboardPage() {
       <main>
         <section className="hero">
           <div className="hero-copy">
-            <span className="hero-chip">Central update visibility for Debian 13</span>
-            <h2>Une console vide, propre et prete a accueillir votre premier serveur.</h2>
+            <span className="hero-chip">Push reports, poll jobs, outbound-only</span>
+            <h2>Une console propre pour enroler des agents Debian 13 et piloter leurs updates.</h2>
             <p>
-              PulseOps est maintenant connecte a un vrai backend. Tant qu&apos;aucun agent n&apos;est
-              configure, l&apos;interface reste volontairement nette: zero serveur, zero historique,
-              zero bruit.
+              Chaque serveur cible remonte son etat au main via HTTPS sous
+              ` /pulseops `. Le main file les ordres, l&apos;agent les recupere ensuite par polling.
             </p>
-
-            <div className="hero-actions">
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() => {
-                  setModalMode("create");
-                  setModalOpen(true);
-                }}
-              >
-                Ajouter un premier serveur
-              </button>
-            </div>
           </div>
 
           <aside className="hero-panel">
             <p className="section-kicker">Live posture</p>
             <div className="status-orbit">
               <div className="status-ring">
-                <strong>{summaryQuery.data?.serverCount ?? 0}</strong>
-                <span>registered servers</span>
+                <strong>{summaryQuery.data?.onlineCount ?? 0}</strong>
+                <span>online agents</span>
               </div>
               <div className="orbit-tag orbit-tag-top">
-                {summaryQuery.data?.reachableCount ?? 0} reachable
+                {summaryQuery.data?.serverCount ?? 0} servers
               </div>
               <div className="orbit-tag orbit-tag-right">
-                {summaryQuery.data?.pendingUpdateCount ?? 0} pending
+                {summaryQuery.data?.queuedJobCount ?? 0} queued jobs
               </div>
               <div className="orbit-tag orbit-tag-bottom">
                 {summaryQuery.data?.securityUpdateCount ?? 0} security
@@ -335,14 +372,20 @@ export function DashboardPage() {
                 <strong>{formatDate(summaryQuery.data?.lastGlobalCheckAt)}</strong>
               </article>
               <article>
-                <span>Current mode</span>
-                <strong>Manual refresh and upgrade</strong>
+                <span>Agent flow</span>
+                <strong>Enroll, report, poll, execute</strong>
               </article>
             </div>
           </aside>
         </section>
 
         {topError ? <div className="alert error">{topError}</div> : null}
+
+        <InstallationPanel
+          enrollment={enrollmentQuery.data}
+          pending={rotateEnrollmentMutation.isPending}
+          onRotate={() => rotateEnrollmentMutation.mutate()}
+        />
 
         <section className="metrics-grid" aria-label="Key metrics">
           <MetricCard
@@ -352,15 +395,15 @@ export function DashboardPage() {
             tone="sand"
           />
           <MetricCard
-            label="Reachable"
-            value={summaryQuery.data?.reachableCount ?? 0}
-            caption="Agents joignables au dernier check valide."
+            label="Online agents"
+            value={summaryQuery.data?.onlineCount ?? 0}
+            caption="Heartbeat recent et polling actif."
             tone="green"
           />
           <MetricCard
-            label="Pending updates"
-            value={summaryQuery.data?.pendingUpdateCount ?? 0}
-            caption="Somme des paquets encore upgradables."
+            label="Queued jobs"
+            value={summaryQuery.data?.queuedJobCount ?? 0}
+            caption="Jobs en attente de prise en charge par les agents."
             tone="amber"
           />
           <MetricCard
@@ -376,19 +419,9 @@ export function DashboardPage() {
             <p className="section-kicker">Fleet status</p>
             <h3>Aucun serveur configure pour le moment</h3>
             <p>
-              Ajoute une URL d&apos;agent et son token pour lancer le premier refresh APT depuis le
-              serveur principal.
+              Lance simplement la commande d&apos;installation ci-dessus sur un Debian 13 cible pour
+              qu&apos;il s&apos;enrole automatiquement dans PulseOps.
             </p>
-            <button
-              className="primary-button"
-              type="button"
-              onClick={() => {
-                setModalMode("create");
-                setModalOpen(true);
-              }}
-            >
-              Ajouter un premier serveur
-            </button>
           </section>
         ) : (
           <section className="content-grid">
@@ -407,28 +440,9 @@ export function DashboardPage() {
                       type="search"
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
-                      placeholder="srv-prod, staging, edge..."
+                      placeholder="hostname, environment, os..."
                     />
                   </label>
-
-                  <div className="filter-group" role="tablist" aria-label="Server filters">
-                    {(["all", "updated", "pending", "critical"] as FilterKey[]).map((key) => (
-                      <button
-                        key={key}
-                        className={`filter-chip ${filter === key ? "active" : ""}`}
-                        type="button"
-                        onClick={() => setFilter(key)}
-                      >
-                        {key === "all"
-                          ? "Tous"
-                          : key === "updated"
-                            ? "A jour"
-                            : key === "pending"
-                              ? "Updates"
-                              : "Critique"}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
 
@@ -449,17 +463,18 @@ export function DashboardPage() {
                           <div>
                             <p className="server-meta">{server.environment}</p>
                             <h4>{server.name}</h4>
-                            <p className="server-note">{server.agentBaseUrl}</p>
+                            <p className="server-note">{server.hostname ?? "Hostname inconnu"}</p>
                           </div>
                           <span className={`server-badge ${state.tone}`}>{state.label}</span>
                         </div>
 
                         <div className="server-card-bottom">
                           <div className="server-stats">
+                            <span className={`server-badge ${server.connectivityStatus === "online" ? "ok" : server.connectivityStatus === "stale" ? "pending" : "critical"}`}>
+                              {server.connectivityStatus}
+                            </span>
                             <span className="server-badge neutral">
-                              {server.latestSnapshot
-                                ? `${server.latestSnapshot.upgradableCount} updates`
-                                : "No snapshot"}
+                              {server.pendingJobsCount} queued
                             </span>
                             <span
                               className={`server-badge ${
@@ -470,7 +485,7 @@ export function DashboardPage() {
                             </span>
                           </div>
                           <p className="server-note">
-                            Last check: {formatDate(server.latestSnapshot?.lastCheckAt)}
+                            Last seen: {formatDate(server.lastSeenAt)}
                           </p>
                         </div>
                       </article>
@@ -495,16 +510,16 @@ export function DashboardPage() {
 
                   <div className="detail-hero">
                     <div>
-                      <p className="detail-label">Environment</p>
-                      <strong>{selectedServer.environment}</strong>
+                      <p className="detail-label">Hostname</p>
+                      <strong>{selectedServer.hostname ?? "--"}</strong>
                     </div>
                     <div>
-                      <p className="detail-label">Last apt check</p>
-                      <strong>{formatDate(selectedServer.latestSnapshot?.lastCheckAt)}</strong>
+                      <p className="detail-label">Last seen</p>
+                      <strong>{formatDate(selectedServer.lastSeenAt)}</strong>
                     </div>
                     <div>
-                      <p className="detail-label">Agent endpoint</p>
-                      <strong>{selectedServer.agentBaseUrl}</strong>
+                      <p className="detail-label">Agent version</p>
+                      <strong>{selectedServer.agentVersion ?? "--"}</strong>
                     </div>
                   </div>
 
@@ -514,18 +529,12 @@ export function DashboardPage() {
                       <strong>{selectedServer.latestSnapshot?.upgradableCount ?? 0}</strong>
                     </article>
                     <article className="detail-card">
-                      <span>Security patches</span>
-                      <strong>{selectedServer.latestSnapshot?.securityCount ?? 0}</strong>
+                      <span>Last report</span>
+                      <strong>{formatDate(selectedServer.lastReportAt)}</strong>
                     </article>
                     <article className="detail-card">
-                      <span>Reboot needed</span>
-                      <strong>
-                        {selectedServer.latestSnapshot
-                          ? selectedServer.latestSnapshot.rebootRequired
-                            ? "Yes"
-                            : "No"
-                          : "--"}
-                      </strong>
+                      <span>Queued jobs</span>
+                      <strong>{selectedServer.pendingJobsCount}</strong>
                     </article>
                   </div>
 
@@ -549,10 +558,7 @@ export function DashboardPage() {
                     <button
                       className="ghost-button"
                       type="button"
-                      onClick={() => {
-                        setModalMode("edit");
-                        setModalOpen(true);
-                      }}
+                      onClick={() => setModalOpen(true)}
                     >
                       Modifier
                     </button>
@@ -572,16 +578,16 @@ export function DashboardPage() {
 
                   <div className="detail-section">
                     <div className="detail-section-header">
-                      <h4>Etat courant</h4>
+                      <h4>Latest report preview</h4>
                       <span>
-                        {selectedServer.latestSnapshot ? "Dernier snapshot valide" : "En attente de premier refresh"}
+                        {selectedServer.latestSnapshot ? "Dernier snapshot valide" : "En attente du premier report"}
                       </span>
                     </div>
                     {selectedServer.latestSnapshot ? (
-                      <pre>{selectedServer.latestSnapshot.rawSummaryJson}</pre>
+                      <pre>{selectedServer.latestSnapshot.outputPreview || selectedServer.latestSnapshot.rawSummaryJson}</pre>
                     ) : (
                       <div className="empty-state compact">
-                        Aucun snapshot disponible. Lance d&apos;abord un refresh APT.
+                        Aucun snapshot disponible. L&apos;agent enverra son premier etat apres enrollement.
                       </div>
                     )}
                   </div>
@@ -604,8 +610,8 @@ export function DashboardPage() {
                 </>
               ) : (
                 <div className="empty-state tall">
-                  Selectionne un serveur pour afficher son detail, ou ajoute le premier si la flotte
-                  est encore vide.
+                  Selectionne un serveur pour afficher son detail, ou enrole le premier agent si la
+                  flotte est encore vide.
                 </div>
               )}
             </aside>
@@ -615,16 +621,10 @@ export function DashboardPage() {
 
       <ServerFormModal
         open={modalOpen}
-        mode={modalMode}
-        initialServer={modalMode === "edit" ? selectedServerSummary : null}
-        pending={createMutation.isPending || updateMutation.isPending}
+        initialServer={selectedServerSummary}
+        pending={updateMutation.isPending}
         onClose={() => setModalOpen(false)}
         onSubmit={(payload) => {
-          if (modalMode === "create") {
-            createMutation.mutate(payload);
-            return;
-          }
-
           if (!selectedServerSummary) {
             return;
           }

@@ -3,7 +3,6 @@ import type { ServerPayload, ServerSummary } from "../types";
 
 type Props = {
   open: boolean;
-  mode: "create" | "edit";
   initialServer?: ServerSummary | null;
   pending: boolean;
   onClose: () => void;
@@ -19,7 +18,6 @@ const environmentOptions = [
 
 export function ServerFormModal({
   open,
-  mode,
   initialServer,
   pending,
   onClose,
@@ -27,8 +25,6 @@ export function ServerFormModal({
 }: Props) {
   const [name, setName] = useState("");
   const [environment, setEnvironment] = useState<ServerPayload["environment"]>("production");
-  const [agentBaseUrl, setAgentBaseUrl] = useState("");
-  const [agentToken, setAgentToken] = useState("");
   const [notes, setNotes] = useState("");
   const [isActive, setIsActive] = useState(true);
 
@@ -39,8 +35,6 @@ export function ServerFormModal({
 
     setName(initialServer?.name ?? "");
     setEnvironment((initialServer?.environment as ServerPayload["environment"]) ?? "production");
-    setAgentBaseUrl(initialServer?.agentBaseUrl ?? "");
-    setAgentToken("");
     setNotes(initialServer?.notes ?? "");
     setIsActive(initialServer?.isActive ?? true);
   }, [initialServer, open]);
@@ -60,10 +54,8 @@ export function ServerFormModal({
       >
         <div className="modal-header">
           <div>
-            <p className="eyebrow">{mode === "create" ? "First steps" : "Server settings"}</p>
-            <h3 id="server-modal-title">
-              {mode === "create" ? "Ajouter un serveur" : "Modifier le serveur"}
-            </h3>
+            <p className="eyebrow">Server settings</p>
+            <h3 id="server-modal-title">Modifier le serveur</h3>
           </div>
           <button className="ghost-button small" type="button" onClick={onClose}>
             Fermer
@@ -78,8 +70,6 @@ export function ServerFormModal({
             onSubmit({
               name,
               environment,
-              agentBaseUrl,
-              agentToken: agentToken || undefined,
               notes,
               isActive,
             });
@@ -107,28 +97,6 @@ export function ServerFormModal({
           </label>
 
           <label>
-            <span>URL de l'agent</span>
-            <input
-              type="url"
-              value={agentBaseUrl}
-              onChange={(event) => setAgentBaseUrl(event.target.value)}
-              placeholder="http://debian-node-01:4010"
-              required
-            />
-          </label>
-
-          <label>
-            <span>{mode === "create" ? "Token agent" : "Nouveau token agent"}</span>
-            <input
-              type="password"
-              value={agentToken}
-              onChange={(event) => setAgentToken(event.target.value)}
-              placeholder={mode === "edit" ? "Laisser vide pour conserver" : "Bearer secret"}
-              required={mode === "create"}
-            />
-          </label>
-
-          <label>
             <span>Notes</span>
             <textarea
               value={notes}
@@ -152,7 +120,7 @@ export function ServerFormModal({
               Annuler
             </button>
             <button className="primary-button" type="submit" disabled={pending}>
-              {pending ? "Enregistrement..." : mode === "create" ? "Ajouter" : "Enregistrer"}
+              {pending ? "Enregistrement..." : "Enregistrer"}
             </button>
           </div>
         </form>
