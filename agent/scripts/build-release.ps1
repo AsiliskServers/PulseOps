@@ -1,11 +1,11 @@
 $ErrorActionPreference = "Stop"
 
-$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$dist = Join-Path $root "dist"
+$agentRoot = Split-Path -Parent $PSScriptRoot
+$dist = Join-Path $agentRoot "dist"
 
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
-Push-Location $root
+Push-Location $agentRoot
 try {
   $env:GOOS = "linux"
   $env:GOARCH = "amd64"
