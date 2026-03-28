@@ -22,11 +22,11 @@ function resolveServerState(server: ServerSummary | ServerDetail): {
   tone: "ok" | "pending" | "critical" | "neutral";
 } {
   if (server.latestJob?.status === "failed") {
-    return { label: "Dernier check en echec", tone: "critical" };
+    return { label: "Echec recent", tone: "critical" };
   }
 
   if (!server.latestSnapshot) {
-    return { label: "Jamais synchronise", tone: "neutral" };
+    return { label: "Aucun report", tone: "neutral" };
   }
 
   if (server.connectivityStatus === "offline") {
@@ -100,8 +100,8 @@ function InstallationPanel({
     <section className="panel installer-panel">
       <div className="panel-header">
         <div>
-          <p className="section-kicker">Agent install</p>
-          <h3>One-liner d'enrollement Debian 13</h3>
+          <p className="section-kicker">Installation</p>
+          <h3>Commande agent Debian 13</h3>
         </div>
         <div className="panel-toolbar">
           <button
@@ -120,22 +120,22 @@ function InstallationPanel({
 
       <div className="installer-grid">
         <article className="detail-card">
-          <span>Public URL</span>
+          <span>URL</span>
           <strong>{enrollment?.publicUrl ?? "--"}</strong>
         </article>
         <article className="detail-card">
-          <span>Report interval</span>
+          <span>Rapport</span>
           <strong>{enrollment ? `${enrollment.reportIntervalSeconds}s` : "--"}</strong>
         </article>
         <article className="detail-card">
-          <span>Job polling</span>
+          <span>Polling</span>
           <strong>{enrollment ? `${enrollment.jobPollIntervalSeconds}s` : "--"}</strong>
         </article>
       </div>
 
       <div className="detail-section">
         <div className="detail-section-header">
-          <h4>Commande a lancer sur le serveur cible</h4>
+          <h4>Commande d'installation</h4>
           <button
             className="ghost-button small"
             type="button"
@@ -145,7 +145,7 @@ function InstallationPanel({
             {copied === "command" ? "Commande copiee" : "Copier la commande"}
           </button>
         </div>
-        <pre>{enrollment?.installCommand ?? "Chargement de la commande d'installation..."}</pre>
+        <pre>{enrollment?.installCommand ?? "Chargement..."}</pre>
       </div>
     </section>
   );
@@ -360,11 +360,11 @@ export function DashboardPage() {
 
         <section className="summary-bar panel">
           <div>
-            <p className="section-kicker">Etat global</p>
-            <h3>Vue d&apos;ensemble</h3>
+            <p className="section-kicker">Resume</p>
+            <h3>Etat global</h3>
           </div>
           <div className="summary-inline">
-            <span>Dernier check: {formatDate(summaryQuery.data?.lastGlobalCheckAt)}</span>
+            <span>Check: {formatDate(summaryQuery.data?.lastGlobalCheckAt)}</span>
             <span>Stale: {summaryQuery.data?.staleCount ?? 0}</span>
             <span>Offline: {summaryQuery.data?.offlineCount ?? 0}</span>
           </div>
@@ -378,20 +378,17 @@ export function DashboardPage() {
 
         {serversQuery.data && serversQuery.data.length === 0 ? (
           <section className="empty-hero panel">
-            <p className="section-kicker">Fleet status</p>
-            <h3>Aucun serveur configure pour le moment</h3>
-            <p>
-              Lance simplement la commande d&apos;installation ci-dessus sur un Debian 13 cible pour
-              qu&apos;il s&apos;enrole automatiquement dans PulseOps.
-            </p>
+            <p className="section-kicker">Serveurs</p>
+            <h3>Aucun serveur pour le moment</h3>
+            <p>Lance la commande d&apos;installation ci-dessus sur un serveur Debian 13.</p>
           </section>
         ) : (
           <section className="content-grid">
             <div className="panel server-panel">
               <div className="panel-header">
                 <div>
-                  <p className="section-kicker">Fleet status</p>
-                  <h3>Serveurs enregistres</h3>
+                  <p className="section-kicker">Serveurs</p>
+                  <h3>Liste</h3>
                 </div>
 
                 <div className="panel-toolbar">
@@ -402,7 +399,7 @@ export function DashboardPage() {
                       type="search"
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
-                      placeholder="hostname, environnement, os..."
+                      placeholder="hostname, environnement..."
                     />
                   </label>
                 </div>
@@ -436,18 +433,18 @@ export function DashboardPage() {
                               {server.connectivityStatus}
                             </span>
                             <span className="server-badge neutral">
-                              {server.pendingJobsCount} queued
+                              {server.pendingJobsCount} jobs
                             </span>
                             <span
                               className={`server-badge ${
                                 (server.latestSnapshot?.securityCount ?? 0) > 0 ? "critical" : "ok"
                               }`}
                             >
-                              {server.latestSnapshot?.securityCount ?? 0} security
+                              {server.latestSnapshot?.securityCount ?? 0} secu
                             </span>
                           </div>
                           <p className="server-note">
-                            Last seen: {formatDate(server.lastSeenAt)}
+                            Vue: {formatDate(server.lastSeenAt)}
                           </p>
                         </div>
                       </article>
@@ -462,7 +459,7 @@ export function DashboardPage() {
                 <>
                   <div className="panel-header compact">
                     <div>
-                      <p className="section-kicker">Selected server</p>
+                      <p className="section-kicker">Detail</p>
                       <h3>{selectedServer.name}</h3>
                     </div>
                     <span className={`status-pill ${selectedState?.tone ?? "neutral"}`}>
@@ -472,30 +469,30 @@ export function DashboardPage() {
 
                   <div className="detail-hero">
                     <div>
-                      <p className="detail-label">Hostname</p>
+                      <p className="detail-label">Nom machine</p>
                       <strong>{selectedServer.hostname ?? "--"}</strong>
                     </div>
                     <div>
-                      <p className="detail-label">Last seen</p>
+                      <p className="detail-label">Derniere vue</p>
                       <strong>{formatDate(selectedServer.lastSeenAt)}</strong>
                     </div>
                     <div>
-                      <p className="detail-label">Agent version</p>
+                      <p className="detail-label">Version agent</p>
                       <strong>{selectedServer.agentVersion ?? "--"}</strong>
                     </div>
                   </div>
 
                   <div className="detail-grid">
                     <article className="detail-card">
-                      <span>Packages pending</span>
+                      <span>Maj en attente</span>
                       <strong>{selectedServer.latestSnapshot?.upgradableCount ?? 0}</strong>
                     </article>
                     <article className="detail-card">
-                      <span>Last report</span>
+                      <span>Dernier report</span>
                       <strong>{formatDate(selectedServer.lastReportAt)}</strong>
                     </article>
                     <article className="detail-card">
-                      <span>Queued jobs</span>
+                      <span>Jobs</span>
                       <strong>{selectedServer.pendingJobsCount}</strong>
                     </article>
                   </div>
@@ -540,29 +537,29 @@ export function DashboardPage() {
 
                   <div className="detail-section">
                     <div className="detail-section-header">
-                      <h4>Latest report preview</h4>
+                      <h4>Dernier report</h4>
                       <span>
-                        {selectedServer.latestSnapshot ? "Dernier snapshot valide" : "En attente du premier report"}
+                        {selectedServer.latestSnapshot ? "Snapshot actuel" : "En attente"}
                       </span>
                     </div>
                     {selectedServer.latestSnapshot ? (
                       <pre>{selectedServer.latestSnapshot.outputPreview || selectedServer.latestSnapshot.rawSummaryJson}</pre>
                     ) : (
                       <div className="empty-state compact">
-                        Aucun snapshot disponible. L&apos;agent enverra son premier etat apres enrollement.
+                        Aucun snapshot disponible.
                       </div>
                     )}
                   </div>
 
                   <div className="detail-section">
                     <div className="detail-section-header">
-                      <h4>Recent jobs</h4>
-                      <span>{selectedServer.recentJobs.length} item(s)</span>
+                      <h4>Jobs recents</h4>
+                      <span>{selectedServer.recentJobs.length}</span>
                     </div>
                     <div className="job-list">
                       {selectedServer.recentJobs.length === 0 ? (
                         <div className="empty-state compact">
-                          Aucun job pour ce serveur pour le moment.
+                          Aucun job.
                         </div>
                       ) : (
                         selectedServer.recentJobs.map((job) => <JobItem key={job.id} job={job} />)
@@ -572,8 +569,7 @@ export function DashboardPage() {
                 </>
               ) : (
                 <div className="empty-state tall">
-                  Selectionne un serveur pour afficher son detail, ou enrole le premier agent si la
-                  flotte est encore vide.
+                  Selectionne un serveur.
                 </div>
               )}
             </aside>

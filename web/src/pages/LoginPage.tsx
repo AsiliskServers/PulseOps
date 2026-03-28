@@ -21,20 +21,17 @@ export function LoginPage() {
     <div className="fullscreen-shell login-shell">
       <div className="login-panel">
         <div className="login-copy">
-          <p className="eyebrow">Debian 13 update control</p>
+          <p className="eyebrow">Console Debian 13</p>
           <h1>PulseOps</h1>
-          <p>
-            Une console centralisee pour suivre et declencher les mises a jour de vos serveurs
-            Debian 13 via un backend principal et des agents distants.
-          </p>
+          <p>Suivi simple des mises a jour et des serveurs Debian 13.</p>
           <div className="login-metrics">
             <article>
-              <strong>Zero mock</strong>
-              <span>Stock initial totalement vide</span>
+              <strong>Base vide</strong>
+              <span>Aucune donnee de demo</span>
             </article>
             <article>
-              <strong>One admin</strong>
-              <span>Premier acces cree au bootstrap</span>
+              <strong>Acces admin</strong>
+              <span>Compte initialise au bootstrap</span>
             </article>
           </div>
         </div>
@@ -47,7 +44,7 @@ export function LoginPage() {
           }}
         >
           <div>
-            <p className="eyebrow">Secure access</p>
+            <p className="eyebrow">Connexion</p>
             <h2>Connexion admin</h2>
           </div>
 
@@ -78,7 +75,7 @@ export function LoginPage() {
           ) : null}
 
           <button className="primary-button wide" type="submit" disabled={loginMutation.isPending}>
-            {loginMutation.isPending ? "Connexion..." : "Entrer dans PulseOps"}
+            {loginMutation.isPending ? "Connexion..." : "Se connecter"}
           </button>
         </form>
       </div>

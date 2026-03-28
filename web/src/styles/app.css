@@ -14,10 +14,10 @@
   --amber-soft: #f7eddc;
   --rose: #b1525f;
   --rose-soft: #f7e5e8;
-  --shadow: 0 12px 36px rgba(31, 22, 16, 0.06);
-  --radius-xl: 28px;
-  --radius-lg: 22px;
-  --radius-md: 16px;
+  --shadow: 0 10px 28px rgba(31, 22, 16, 0.05);
+  --radius-xl: 18px;
+  --radius-lg: 14px;
+  --radius-md: 12px;
   --radius-sm: 999px;
   --body-font: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
@@ -38,6 +38,17 @@ body {
   font-family: var(--body-font);
 }
 
+h1,
+h2,
+h3,
+h4,
+p,
+span,
+strong,
+small {
+  overflow-wrap: anywhere;
+}
+
 button,
 input,
 textarea,
@@ -51,9 +62,9 @@ button:disabled {
 }
 
 .page-shell {
-  width: min(1480px, calc(100% - 32px));
+  width: min(1420px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 24px 0 40px;
+  padding: 28px 0 48px;
 }
 
 .fullscreen-shell {
@@ -83,9 +94,9 @@ button:disabled {
   width: min(1100px, 100%);
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.8fr);
-  gap: 24px;
-  padding: 28px;
-  border-radius: 34px;
+  gap: 28px;
+  padding: 32px;
+  border-radius: 20px;
 }
 
 .login-copy {
@@ -117,8 +128,8 @@ button:disabled {
 .login-card {
   display: grid;
   gap: 18px;
-  padding: 24px;
-  border-radius: 28px;
+  padding: 28px;
+  border-radius: 18px;
 }
 
 .login-card label,
@@ -191,7 +202,7 @@ button:disabled {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 20px;
-  padding: 16px 20px;
+  padding: 18px 22px;
   border-radius: var(--radius-xl);
 }
 
@@ -206,7 +217,7 @@ button:disabled {
   place-items: center;
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #14100d;
   color: #fff;
   font-size: 1.15rem;
@@ -299,12 +310,13 @@ button:disabled {
 
 .metrics-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 18px;
+  margin-top: 24px;
 }
 
 .metric-card {
-  padding: 18px 20px;
-  border-radius: 22px;
+  min-width: 0;
+  padding: 20px 22px;
+  border-radius: 14px;
 }
 
 .metric-card span,
@@ -318,8 +330,9 @@ button:disabled {
 .detail-card strong {
   display: block;
   margin-top: 10px;
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .accent-neutral {
@@ -339,11 +352,11 @@ button:disabled {
 }
 
 .summary-bar {
-  margin-top: 16px;
+  margin-top: 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
 }
 
 .summary-inline {
@@ -356,20 +369,21 @@ button:disabled {
 
 .summary-inline span {
   padding: 10px 12px;
-  border-radius: 999px;
+  border-radius: 10px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
 }
 
 .content-grid {
   grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.9fr);
-  margin-top: 18px;
+  margin-top: 20px;
 }
 
 .panel,
 .fullscreen-card {
-  padding: 22px;
-  border-radius: 28px;
+  min-width: 0;
+  padding: 24px;
+  border-radius: 16px;
 }
 
 .panel-header,
@@ -397,10 +411,11 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  border-radius: 999px;
+  padding: 10px 12px;
+  border-radius: 10px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
+  min-width: 260px;
 }
 
 .search-field span {
@@ -425,7 +440,8 @@ button:disabled {
 .detail-section,
 .job-card,
 .empty-hero {
-  border-radius: 18px;
+  min-width: 0;
+  border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--surface-soft);
 }
@@ -433,7 +449,7 @@ button:disabled {
 .server-card {
   display: grid;
   gap: 14px;
-  padding: 18px;
+  padding: 18px 18px 16px;
   cursor: pointer;
   transition:
     transform 140ms ease,
@@ -473,6 +489,7 @@ button:disabled {
 .server-badge {
   padding: 7px 11px;
   font-size: 0.84rem;
+  line-height: 1.2;
 }
 
 .server-badge.ok,
@@ -506,9 +523,9 @@ button:disabled {
 .detail-hero {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  padding: 16px;
-  border-radius: 18px;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 12px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
 }
@@ -527,7 +544,7 @@ button:disabled {
 .detail-section,
 .job-card,
 .empty-hero {
-  padding: 16px;
+  padding: 18px;
 }
 
 .detail-section {
@@ -542,13 +559,14 @@ button:disabled {
 pre {
   margin: 0;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #181310;
   color: #fffaf5;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.55;
+  font-size: 0.92rem;
 }
 
 .job-card p,
@@ -564,7 +582,7 @@ pre {
 .empty-state,
 .alert {
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 .empty-state {
@@ -615,7 +633,7 @@ pre {
 .modal-card {
   width: min(640px, 100%);
   padding: 24px;
-  border-radius: 24px;
+  border-radius: 16px;
 }
 
 .server-form {
@@ -664,7 +682,7 @@ pre {
   .login-panel,
   .login-card,
   .modal-card {
-    border-radius: 22px;
+    border-radius: 14px;
   }
 
   .metrics-grid,
@@ -690,6 +708,7 @@ pre {
 
   .search-field {
     width: 100%;
+    min-width: 0;
   }
 
   .metrics-grid {
