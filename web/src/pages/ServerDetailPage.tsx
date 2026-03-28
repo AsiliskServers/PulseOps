@@ -14,7 +14,33 @@ import {
   formatDate,
   resolveServerState,
 } from "../lib/presentation";
-import type { Job, ServerPayload } from "../types";
+import type { Job, ServerDetail, ServerPayload } from "../types";
+
+const liveStatuses = new Set(["queued", "claimed", "running"]);
+
+function isLiveJob(job: Job): boolean {
+  return liveStatuses.has(job.status);
+}
+
+function getLiveCommand(job: Job): string {
+  if (job.type === "upgrade") {
+    return "apt-get update && apt-get upgrade -y";
+  }
+
+  return "apt-get update && apt list --upgradable";
+}
+
+function getLiveMessage(job: Job): string {
+  if (job.status === "queued") {
+    return "Job en file d'attente. L'agent recuperera la commande au prochain polling.";
+  }
+
+  if (job.status === "claimed") {
+    return "Commande prise en charge par l'agent. Execution en preparation.";
+  }
+
+  return "Commande en cours d'execution. La vue se rafraichit automatiquement.";
+}
 
 function JobRow({ job }: { job: Job }) {
   const tone =
@@ -45,7 +71,14 @@ export function ServerDetailPage() {
     queryKey: ["server", serverId],
     queryFn: () => getServer(serverId!),
     enabled: Boolean(serverId),
-    refetchInterval: serverId ? 5000 : false,
+    refetchInterval: (query) => {
+      if (!serverId) {
+        return false;
+      }
+
+      const data = query.state.data as ServerDetail | undefined;
+      return data?.recentJobs.some(isLiveJob) ? 1500 : 5000;
+    },
   });
 
   const updateMutation = useMutation({
@@ -95,6 +128,9 @@ export function ServerDetailPage() {
 
   const server = detailQuery.data;
   const state = server ? resolveServerState(server) : null;
+  const liveJob =
+    server?.recentJobs.find(isLiveJob) ??
+    (server?.latestJob && isLiveJob(server.latestJob) ? server.latestJob : null);
   const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
   const topError =
     (detailQuery.error instanceof Error && detailQuery.error.message) ||
@@ -254,9 +290,46 @@ export function ServerDetailPage() {
                 <p className="section-kicker">Snapshot</p>
                 <h3>Dernier retour agent</h3>
               </div>
+
+              {liveJob ? (
+                <div className="live-indicator">
+                  <span className="live-dot" />
+                  <span>En direct</span>
+                </div>
+              ) : null}
             </div>
 
-            {server.latestSnapshot ? (
+            {liveJob ? (
+              <div className="terminal-shell terminal-shell-live" role="presentation">
+                <div className="terminal-header">
+                  <div className="terminal-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <strong>{liveJob.type === "upgrade" ? "upgrade en cours" : "refresh en cours"}</strong>
+                </div>
+
+                <div className="terminal-body">
+                  <div className="terminal-line">
+                    <span className="terminal-prompt">$</span>
+                    <span className="terminal-command">{getLiveCommand(liveJob)}</span>
+                  </div>
+                  <div className="terminal-output live-line">
+                    <span className="live-dot" />
+                    <span>{getLiveMessage(liveJob)}</span>
+                  </div>
+                  <div className="terminal-output muted">
+                    Derniere transition: {formatDate(
+                      liveJob.startedAt ?? liveJob.claimedAt ?? liveJob.createdAt
+                    )}
+                  </div>
+                  <div className="terminal-output muted">
+                    La liste finale des paquets s'affichera automatiquement a la fin du job.
+                  </div>
+                </div>
+              </div>
+            ) : server.latestSnapshot ? (
               upgradablePackages.length > 0 ? (
                 <div className="terminal-shell" role="presentation">
                   <div className="terminal-header">
