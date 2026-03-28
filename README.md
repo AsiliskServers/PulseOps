@@ -62,6 +62,24 @@ npm run dev:web
 
 Le frontend Vite est servi localement sous `http://localhost:5173/pulseops/`.
 
+### Mise a jour rapide d'une instance
+
+Depuis la racine du projet :
+
+```bash
+bash ./update-pulseops.sh
+```
+
+Le script fait :
+
+- `git pull --ff-only`
+- `npm install`
+- `prisma generate`
+- `prisma push`
+- build web et server
+- build agent si Go est installe
+- restart `pulseops.service` si le service existe
+
 ## Agent Go
 
 ### Build releases Linux

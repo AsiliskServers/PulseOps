@@ -65,19 +65,16 @@ function findMutationError(errors: Array<unknown>): string | null {
 function MetricCard({
   label,
   value,
-  caption,
   tone,
 }: {
   label: string;
   value: string | number;
-  caption: string;
-  tone: "sand" | "green" | "amber" | "rose";
+  tone: "neutral" | "green" | "amber" | "rose";
 }) {
   return (
     <article className={`metric-card accent-${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
-      <p>{caption}</p>
     </article>
   );
 }
@@ -316,14 +313,12 @@ export function DashboardPage() {
         <div className="brand-lockup">
           <div className="brand-mark">P</div>
           <div>
-            <p className="eyebrow">Debian 13 update control</p>
+            <p className="eyebrow">Console de supervision</p>
             <h1>PulseOps</h1>
           </div>
         </div>
 
-        <div className="topbar-copy">
-          <span className="hero-chip">Outbound agents over https://app.asilisk.fr/pulseops</span>
-        </div>
+        <div className="topbar-copy">Debian 13</div>
 
         <div className="topbar-actions">
           <button
@@ -338,81 +333,48 @@ export function DashboardPage() {
       </header>
 
       <main>
-        <section className="hero">
-          <div className="hero-copy">
-            <span className="hero-chip">Push reports, poll jobs, outbound-only</span>
-            <h2>Une console propre pour enroler des agents Debian 13 et piloter leurs updates.</h2>
-            <p>
-              Chaque serveur cible remonte son etat au main via HTTPS sous
-              ` /pulseops `. Le main file les ordres, l&apos;agent les recupere ensuite par polling.
-            </p>
-          </div>
+        {topError ? <div className="alert error">{topError}</div> : null}
 
-          <aside className="hero-panel">
-            <p className="section-kicker">Live posture</p>
-            <div className="status-orbit">
-              <div className="status-ring">
-                <strong>{summaryQuery.data?.onlineCount ?? 0}</strong>
-                <span>online agents</span>
-              </div>
-              <div className="orbit-tag orbit-tag-top">
-                {summaryQuery.data?.serverCount ?? 0} servers
-              </div>
-              <div className="orbit-tag orbit-tag-right">
-                {summaryQuery.data?.queuedJobCount ?? 0} queued jobs
-              </div>
-              <div className="orbit-tag orbit-tag-bottom">
-                {summaryQuery.data?.securityUpdateCount ?? 0} security
-              </div>
-            </div>
-
-            <div className="mini-feed">
-              <article>
-                <span>Last global check</span>
-                <strong>{formatDate(summaryQuery.data?.lastGlobalCheckAt)}</strong>
-              </article>
-              <article>
-                <span>Agent flow</span>
-                <strong>Enroll, report, poll, execute</strong>
-              </article>
-            </div>
-          </aside>
+        <section className="metrics-grid" aria-label="Key metrics">
+          <MetricCard
+            label="Serveurs"
+            value={summaryQuery.data?.serverCount ?? 0}
+            tone="neutral"
+          />
+          <MetricCard
+            label="En ligne"
+            value={summaryQuery.data?.onlineCount ?? 0}
+            tone="green"
+          />
+          <MetricCard
+            label="Jobs en attente"
+            value={summaryQuery.data?.queuedJobCount ?? 0}
+            tone="amber"
+          />
+          <MetricCard
+            label="Correctifs securite"
+            value={summaryQuery.data?.securityUpdateCount ?? 0}
+            tone="rose"
+          />
         </section>
 
-        {topError ? <div className="alert error">{topError}</div> : null}
+        <section className="summary-bar panel">
+          <div>
+            <p className="section-kicker">Etat global</p>
+            <h3>Vue d&apos;ensemble</h3>
+          </div>
+          <div className="summary-inline">
+            <span>Dernier check: {formatDate(summaryQuery.data?.lastGlobalCheckAt)}</span>
+            <span>Stale: {summaryQuery.data?.staleCount ?? 0}</span>
+            <span>Offline: {summaryQuery.data?.offlineCount ?? 0}</span>
+          </div>
+        </section>
 
         <InstallationPanel
           enrollment={enrollmentQuery.data}
           pending={rotateEnrollmentMutation.isPending}
           onRotate={() => rotateEnrollmentMutation.mutate()}
         />
-
-        <section className="metrics-grid" aria-label="Key metrics">
-          <MetricCard
-            label="Fleet registered"
-            value={summaryQuery.data?.serverCount ?? 0}
-            caption="Serveurs enregistres dans la base principale."
-            tone="sand"
-          />
-          <MetricCard
-            label="Online agents"
-            value={summaryQuery.data?.onlineCount ?? 0}
-            caption="Heartbeat recent et polling actif."
-            tone="green"
-          />
-          <MetricCard
-            label="Queued jobs"
-            value={summaryQuery.data?.queuedJobCount ?? 0}
-            caption="Jobs en attente de prise en charge par les agents."
-            tone="amber"
-          />
-          <MetricCard
-            label="Security patches"
-            value={summaryQuery.data?.securityUpdateCount ?? 0}
-            caption="Correctifs securite detectes au dernier check."
-            tone="rose"
-          />
-        </section>
 
         {serversQuery.data && serversQuery.data.length === 0 ? (
           <section className="empty-hero panel">
@@ -434,13 +396,13 @@ export function DashboardPage() {
 
                 <div className="panel-toolbar">
                   <label className="search-field" htmlFor="searchInput">
-                    <span>Search</span>
+                    <span>Recherche</span>
                     <input
                       id="searchInput"
                       type="search"
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
-                      placeholder="hostname, environment, os..."
+                      placeholder="hostname, environnement, os..."
                     />
                   </label>
                 </div>
