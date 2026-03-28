@@ -45,3 +45,14 @@ export function resolveServerState(server: ServerSummary | ServerDetail): {
 
   return { label: "A jour", tone: "ok" };
 }
+
+export function extractUpgradablePackages(value: string | null | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && line.includes("[upgradable from:"));
+}

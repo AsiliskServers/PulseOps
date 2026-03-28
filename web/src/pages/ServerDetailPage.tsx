@@ -9,7 +9,11 @@ import {
   updateServer,
 } from "../api/servers";
 import { ServerFormModal } from "../components/ServerFormModal";
-import { formatDate, resolveServerState } from "../lib/presentation";
+import {
+  extractUpgradablePackages,
+  formatDate,
+  resolveServerState,
+} from "../lib/presentation";
 import type { Job, ServerPayload } from "../types";
 
 function JobRow({ job }: { job: Job }) {
@@ -91,6 +95,7 @@ export function ServerDetailPage() {
 
   const server = detailQuery.data;
   const state = server ? resolveServerState(server) : null;
+  const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
   const topError =
     (detailQuery.error instanceof Error && detailQuery.error.message) ||
     (updateMutation.error instanceof Error && updateMutation.error.message) ||
@@ -252,7 +257,25 @@ export function ServerDetailPage() {
             </div>
 
             {server.latestSnapshot ? (
-              <pre>{server.latestSnapshot.outputPreview || server.latestSnapshot.rawSummaryJson}</pre>
+              upgradablePackages.length > 0 ? (
+                <div className="package-list">
+                  {upgradablePackages.map((line) => {
+                    const [name, ...rest] = line.split(" ");
+                    return (
+                      <article key={line} className="package-item">
+                        <strong className="package-name">{name}</strong>
+                        <p className="package-meta">{rest.join(" ")}</p>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  {server.latestSnapshot.upgradableCount > 0
+                    ? "Le retour agent ne contient pas de liste detaillee exploitable."
+                    : "Aucun paquet en attente de mise a jour."}
+                </div>
+              )
             ) : (
               <div className="empty-state">Aucun snapshot disponible pour ce serveur.</div>
             )}

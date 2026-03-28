@@ -361,6 +361,8 @@ pre {
 
 .page-heading {
   min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
 .page-heading h2 {
@@ -385,6 +387,18 @@ pre {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.panel-header,
+.modal-header {
+  margin-bottom: 16px;
+}
+
+.panel-header > div,
+.modal-header > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .page-separator {
@@ -651,6 +665,31 @@ pre {
   border: 1px solid var(--line);
   color: var(--text);
   line-height: 1.7;
+}
+
+.package-list {
+  display: grid;
+  gap: 10px;
+}
+
+.package-item {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.package-name {
+  display: block;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.package-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
 }
 
 .server-badge,
