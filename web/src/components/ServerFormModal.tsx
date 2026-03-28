@@ -54,7 +54,7 @@ export function ServerFormModal({
       >
         <div className="modal-header">
           <div>
-            <p className="eyebrow">Server settings</p>
+            <p className="eyebrow">Serveur</p>
             <h3 id="server-modal-title">Modifier le serveur</h3>
           </div>
           <button className="ghost-button small" type="button" onClick={onClose}>

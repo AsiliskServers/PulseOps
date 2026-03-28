@@ -13,7 +13,7 @@ export function LoginPage() {
     mutationFn: () => login(email, password),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["session"] });
-      navigate("/", { replace: true });
+      navigate("/overview", { replace: true });
     },
   });
 
@@ -21,17 +21,17 @@ export function LoginPage() {
     <div className="fullscreen-shell login-shell">
       <div className="login-panel">
         <div className="login-copy">
-          <p className="eyebrow">Console Debian 13</p>
+          <p className="eyebrow">PulseOps</p>
           <h1>PulseOps</h1>
-          <p>Suivi simple des mises a jour et des serveurs Debian 13.</p>
+          <p>Console d&apos;administration pour le parc Debian 13.</p>
           <div className="login-metrics">
             <article>
-              <strong>Base vide</strong>
-              <span>Aucune donnee de demo</span>
+              <strong>Parc centralise</strong>
+              <span>Serveurs, jobs et snapshots au meme endroit</span>
             </article>
             <article>
               <strong>Acces admin</strong>
-              <span>Compte initialise au bootstrap</span>
+              <span>Compte initialise au bootstrap serveur</span>
             </article>
           </div>
         </div>

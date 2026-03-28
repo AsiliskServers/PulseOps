@@ -22,7 +22,7 @@ export function RequireAuth() {
   });
 
   if (sessionQuery.isLoading) {
-    return <FullScreenState title="Checking session" body="Verification de votre acces..." />;
+    return <FullScreenState title="Chargement" body="Verification de votre acces..." />;
   }
 
   if (sessionQuery.isError) {
@@ -39,11 +39,11 @@ export function GuestOnly() {
   });
 
   if (sessionQuery.isLoading) {
-    return <FullScreenState title="Loading" body="Ouverture de la session PulseOps..." />;
+    return <FullScreenState title="Chargement" body="Ouverture de la session PulseOps..." />;
   }
 
   if (sessionQuery.data) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/overview" replace />;
   }
 
   return <Outlet />;
