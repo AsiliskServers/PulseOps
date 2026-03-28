@@ -39,6 +39,22 @@ export async function deleteServer(id: string): Promise<void> {
   });
 }
 
+export async function clearServerHistory(id: string): Promise<void> {
+  await fetchJson<void>(`/servers/${id}/history`, {
+    method: "DELETE",
+  });
+}
+
+export async function queueBatchJobs(input: {
+  serverIds: string[];
+  type: "refresh" | "upgrade";
+}): Promise<{ queuedCount: number }> {
+  return fetchJson<{ queuedCount: number }>("/servers/batch/jobs", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export async function triggerRefresh(id: string): Promise<Job> {
   const payload = await fetchJson<{ job: Job }>(`/servers/${id}/refresh`, {
     method: "POST",

@@ -550,7 +550,7 @@ pre {
 
 .table-head {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) 160px 140px 160px;
+  grid-template-columns: 38px minmax(0, 1.3fr) 160px 140px 160px;
   gap: 12px;
   padding: 0 16px 8px;
   font-size: 11px;
@@ -562,7 +562,7 @@ pre {
 
 .table-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) 160px 140px 160px;
+  grid-template-columns: 38px minmax(0, 1.3fr) 160px 140px 160px;
   gap: 12px;
   align-items: center;
   transition:
@@ -575,6 +575,55 @@ pre {
 .overview-row:hover {
   transform: translateY(-1px);
   border-color: var(--line-strong);
+}
+
+.selectable-row.selected {
+  border-color: rgba(22, 50, 74, 0.22);
+  background: #f3f7fa;
+}
+
+.table-name-link {
+  display: inline-flex;
+}
+
+.table-name-link:hover strong {
+  text-decoration: underline;
+}
+
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.bulk-select,
+.row-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bulk-select span {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.bulk-select input,
+.row-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.row-check {
+  justify-content: center;
 }
 
 .search-field {
@@ -665,6 +714,28 @@ pre {
   border: 1px solid var(--line);
   color: var(--text);
   line-height: 1.7;
+}
+
+.notes-form {
+  display: grid;
+  gap: 14px;
+}
+
+.notes-textarea {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: var(--surface-soft);
+  color: var(--text);
+  outline: none;
+  line-height: 1.7;
+}
+
+.notes-textarea:focus {
+  border-color: var(--line-strong);
 }
 
 .terminal-shell {
@@ -760,6 +831,7 @@ pre {
 }
 
 .live-indicator {
+  align-self: center;
   padding: 7px 10px;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(125, 211, 252, 0.24);
@@ -767,8 +839,14 @@ pre {
   color: #1f6588;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.live-indicator span:last-child {
+  display: inline-flex;
+  align-items: center;
 }
 
 .live-dot {
@@ -779,6 +857,7 @@ pre {
   box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.55);
   animation: pulseops-live-dot 1.6s ease-out infinite;
   flex: 0 0 auto;
+  display: block;
 }
 
 @keyframes pulseops-live-dot {
@@ -1019,6 +1098,10 @@ pre {
 
   .table-row {
     grid-template-columns: 1fr;
+  }
+
+  .bulk-toolbar {
+    align-items: stretch;
   }
 
   .overview-row,

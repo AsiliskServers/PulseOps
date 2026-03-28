@@ -47,6 +47,35 @@ function parseUpdatePayload(body: unknown) {
   };
 }
 
+function parseBatchJobPayload(body: unknown) {
+  if (!isRecord(body)) {
+    throw new Error("Invalid request body");
+  }
+
+  const rawIds = body.serverIds;
+  if (!Array.isArray(rawIds) || rawIds.length === 0) {
+    throw new Error("serverIds must contain at least one server id");
+  }
+
+  const serverIds = Array.from(
+    new Set(
+      rawIds
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+    )
+  );
+
+  if (serverIds.length === 0) {
+    throw new Error("serverIds must contain at least one server id");
+  }
+
+  return {
+    serverIds,
+    type: normalizeJobType(readRequiredString(body, "type", "type")),
+  };
+}
+
 export async function registerServerRoutes(
   app: FastifyInstance,
   env: ServerEnv
@@ -124,6 +153,53 @@ export async function registerServerRoutes(
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create server";
+      return reply.status(400).send({ message });
+    }
+  });
+
+  app.post("/batch/jobs", async (request, reply) => {
+    const user = await requireSessionUser(request, reply);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const payload = parseBatchJobPayload(request.body);
+      const servers = await prisma.server.findMany({
+        where: {
+          id: {
+            in: payload.serverIds,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (servers.length !== payload.serverIds.length) {
+        return reply.status(404).send({ message: "One or more servers were not found" });
+      }
+
+      const jobs = await prisma.$transaction(
+        payload.serverIds.map((serverId) =>
+          prisma.job.create({
+            data: {
+              serverId,
+              type: payload.type,
+              status: "queued",
+              triggeredByUserId: user.id,
+            },
+          })
+        )
+      );
+
+      return reply.status(202).send({
+        queuedCount: jobs.length,
+        jobs: jobs.map((job) => serializeJob(job)),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to queue jobs";
       return reply.status(400).send({ message });
     }
   });
@@ -292,6 +368,56 @@ export async function registerServerRoutes(
 
     const job = await queueJob(serverId, user.id, "upgrade");
     return reply.status(202).send({ job: serializeJob(job) });
+  });
+
+  app.delete("/:id/history", async (request, reply) => {
+    const user = await requireSessionUser(request, reply);
+
+    if (!user) {
+      return;
+    }
+
+    const serverId = String((request.params as { id: string }).id);
+    const [server, runningJobsCount] = await Promise.all([
+      prisma.server.findUnique({
+        where: {
+          id: serverId,
+        },
+      }),
+      prisma.job.count({
+        where: {
+          serverId,
+          status: {
+            in: ["queued", "claimed", "running"],
+          },
+        },
+      }),
+    ]);
+
+    if (!server) {
+      return reply.status(404).send({ message: "Server not found" });
+    }
+
+    if (runningJobsCount > 0) {
+      return reply.status(409).send({
+        message: "Impossible de vider l'historique pendant qu'un job est en cours",
+      });
+    }
+
+    await prisma.$transaction([
+      prisma.job.deleteMany({
+        where: {
+          serverId,
+        },
+      }),
+      prisma.serverSnapshot.deleteMany({
+        where: {
+          serverId,
+        },
+      }),
+    ]);
+
+    return reply.status(204).send();
   });
 
   app.get("/:id/jobs", async (request, reply) => {

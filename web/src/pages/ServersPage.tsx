@@ -1,12 +1,14 @@
-import { useDeferredValue, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useDeferredValue, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { getSummary, listServers } from "../api/servers";
+import { getSummary, listServers, queueBatchJobs } from "../api/servers";
 import { formatDate, resolveServerState } from "../lib/presentation";
 
 export function ServersPage() {
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const queryClient = useQueryClient();
 
   const summaryQuery = useQuery({
     queryKey: ["summary"],
@@ -28,6 +30,57 @@ export function ServersPage() {
         }`.toLowerCase();
       return haystack.includes(deferredSearch);
     }) ?? [];
+
+  useEffect(() => {
+    if (!serversQuery.data) {
+      return;
+    }
+
+    const validIds = new Set(serversQuery.data.map((server) => server.id));
+    setSelectedIds((current) => current.filter((id) => validIds.has(id)));
+  }, [serversQuery.data]);
+
+  const batchMutation = useMutation({
+    mutationFn: (type: "refresh" | "upgrade") =>
+      queueBatchJobs({
+        serverIds: selectedIds,
+        type,
+      }),
+    onSuccess: async () => {
+      setSelectedIds([]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["servers"] }),
+        queryClient.invalidateQueries({ queryKey: ["summary"] }),
+      ]);
+    },
+  });
+
+  const visibleIds = servers.map((server) => server.id);
+  const selectedVisibleCount = visibleIds.filter((id) => selectedIds.includes(id)).length;
+  const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  const hasSelection = selectedIds.length > 0;
+
+  function toggleServerSelection(serverId: string, checked: boolean) {
+    setSelectedIds((current) =>
+      checked ? Array.from(new Set([...current, serverId])) : current.filter((id) => id !== serverId)
+    );
+  }
+
+  function toggleVisibleSelection(checked: boolean) {
+    setSelectedIds((current) => {
+      if (checked) {
+        return Array.from(new Set([...current, ...visibleIds]));
+      }
+
+      return current.filter((id) => !visibleIds.includes(id));
+    });
+  }
+
+  const topError =
+    (serversQuery.error instanceof Error && serversQuery.error.message) ||
+    (summaryQuery.error instanceof Error && summaryQuery.error.message) ||
+    (batchMutation.error instanceof Error && batchMutation.error.message) ||
+    null;
 
   return (
     <div className="page-column">
@@ -69,7 +122,45 @@ export function ServersPage() {
           </label>
         </div>
 
+        {topError ? <div className="alert error">{topError}</div> : null}
+
+        <div className="bulk-toolbar">
+          <label className="bulk-select">
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={(event) => toggleVisibleSelection(event.target.checked)}
+              disabled={visibleIds.length === 0}
+            />
+            <span>
+              {selectedIds.length > 0
+                ? `${selectedIds.length} serveur${selectedIds.length > 1 ? "s" : ""} selectionne${selectedIds.length > 1 ? "s" : ""}`
+                : "Selectionner les serveurs visibles"}
+            </span>
+          </label>
+
+          <div className="inline-actions">
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => batchMutation.mutate("refresh")}
+              disabled={!hasSelection || batchMutation.isPending}
+            >
+              {batchMutation.isPending ? "Traitement..." : "Refresh selection"}
+            </button>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => batchMutation.mutate("upgrade")}
+              disabled={!hasSelection || batchMutation.isPending}
+            >
+              {batchMutation.isPending ? "Traitement..." : "Upgrade selection"}
+            </button>
+          </div>
+        </div>
+
         <div className="table-head">
+          <span></span>
           <span>Serveur</span>
           <span>Etat</span>
           <span>Environnement</span>
@@ -83,9 +174,23 @@ export function ServersPage() {
             servers.map((server) => {
               const state = resolveServerState(server);
               return (
-                <Link key={server.id} to={`/servers/${server.id}`} className="table-row">
+                <div
+                  key={server.id}
+                  className={`table-row selectable-row ${
+                    selectedIds.includes(server.id) ? "selected" : ""
+                  }`}
+                >
+                  <label className="row-check">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(server.id)}
+                      onChange={(event) => toggleServerSelection(server.id, event.target.checked)}
+                    />
+                  </label>
                   <div>
-                    <strong>{server.name}</strong>
+                    <Link className="table-name-link" to={`/servers/${server.id}`}>
+                      <strong>{server.name}</strong>
+                    </Link>
                     <p>{server.hostname ?? "Hostname inconnu"}</p>
                   </div>
                   <div>
@@ -98,7 +203,7 @@ export function ServersPage() {
                     <span>{formatDate(server.lastSeenAt)}</span>
                     <small>{server.pendingJobsCount} jobs</small>
                   </div>
-                </Link>
+                </div>
               );
             })
           )}

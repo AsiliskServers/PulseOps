@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  clearServerHistory,
   deleteServer,
   getServer,
   triggerRefresh,
@@ -66,6 +67,7 @@ export function ServerDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
 
   const detailQuery = useQuery({
     queryKey: ["server", serverId],
@@ -80,6 +82,12 @@ export function ServerDetailPage() {
       return data?.recentJobs.some(isLiveJob) ? 1500 : 5000;
     },
   });
+
+  const server = detailQuery.data;
+
+  useEffect(() => {
+    setNotesDraft(server?.notes ?? "");
+  }, [server?.id, server?.notes]);
 
   const updateMutation = useMutation({
     mutationFn: (payload: ServerPayload) => updateServer(serverId!, payload),
@@ -126,17 +134,53 @@ export function ServerDetailPage() {
     },
   });
 
-  const server = detailQuery.data;
+  const clearHistoryMutation = useMutation({
+    mutationFn: () => clearServerHistory(serverId!),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
+        queryClient.invalidateQueries({ queryKey: ["servers"] }),
+        queryClient.invalidateQueries({ queryKey: ["summary"] }),
+      ]);
+    },
+  });
+
+  const notesMutation = useMutation({
+    mutationFn: async () => {
+      if (!server) {
+        throw new Error("Serveur introuvable");
+      }
+
+      return updateServer(serverId!, {
+        name: server.name,
+        environment: server.environment as ServerPayload["environment"],
+        notes: notesDraft,
+        isActive: server.isActive,
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
+        queryClient.invalidateQueries({ queryKey: ["servers"] }),
+        queryClient.invalidateQueries({ queryKey: ["summary"] }),
+      ]);
+    },
+  });
+
   const state = server ? resolveServerState(server) : null;
   const liveJob =
     server?.recentJobs.find(isLiveJob) ??
     (server?.latestJob && isLiveJob(server.latestJob) ? server.latestJob : null);
   const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
+  const hasHistory = Boolean(server?.latestSnapshot) || (server?.recentJobs.length ?? 0) > 0;
+  const notesDirty = notesDraft !== (server?.notes ?? "");
   const topError =
     (detailQuery.error instanceof Error && detailQuery.error.message) ||
     (updateMutation.error instanceof Error && updateMutation.error.message) ||
+    (notesMutation.error instanceof Error && notesMutation.error.message) ||
     (refreshMutation.error instanceof Error && refreshMutation.error.message) ||
     (upgradeMutation.error instanceof Error && upgradeMutation.error.message) ||
+    (clearHistoryMutation.error instanceof Error && clearHistoryMutation.error.message) ||
     (deleteMutation.error instanceof Error && deleteMutation.error.message) ||
     null;
 
@@ -372,6 +416,23 @@ export function ServerDetailPage() {
                 <p className="section-kicker">Execution</p>
                 <h3>Historique recent</h3>
               </div>
+
+              <button
+                className="ghost-button danger small"
+                type="button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Vider l'historique de ce serveur ? Les jobs et snapshots seront supprimes."
+                    )
+                  ) {
+                    clearHistoryMutation.mutate();
+                  }
+                }}
+                disabled={!hasHistory || clearHistoryMutation.isPending || Boolean(liveJob)}
+              >
+                {clearHistoryMutation.isPending ? "Nettoyage..." : "Vider l'historique"}
+              </button>
             </div>
 
             <div className="job-list">
@@ -421,11 +482,39 @@ export function ServerDetailPage() {
               </div>
             </div>
 
-            {server.notes ? (
-              <div className="note-block">{server.notes}</div>
-            ) : (
-              <div className="empty-state">Aucune note enregistree.</div>
-            )}
+            <form
+              className="notes-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                notesMutation.mutate();
+              }}
+            >
+              <textarea
+                className="notes-textarea"
+                value={notesDraft}
+                onChange={(event) => setNotesDraft(event.target.value)}
+                rows={8}
+                placeholder="Ajouter des notes sur ce serveur, la maintenance, le contexte reseau ou un contact..."
+              />
+
+              <div className="inline-actions">
+                <button
+                  className="ghost-button small"
+                  type="button"
+                  onClick={() => setNotesDraft(server.notes ?? "")}
+                  disabled={!notesDirty || notesMutation.isPending}
+                >
+                  Reinitialiser
+                </button>
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={!notesDirty || notesMutation.isPending}
+                >
+                  {notesMutation.isPending ? "Enregistrement..." : "Enregistrer la note"}
+                </button>
+              </div>
+            </form>
           </section>
         </aside>
       </section>
