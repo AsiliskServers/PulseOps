@@ -43,7 +43,7 @@ func RunRefresh() (Summary, error) {
 		SecurityCount:   securityCount,
 		RebootRequired:  fileExists("/var/run/reboot-required"),
 		CheckedAt:       time.Now().UTC(),
-		OutputPreview:   trimPreview(listOutput),
+		OutputPreview:   buildUpgradablePreview(listOutput),
 	}, nil
 }
 
@@ -75,7 +75,7 @@ func RunUpgrade(allowUpgrade bool) (Summary, error) {
 		SecurityCount:   securityCount,
 		RebootRequired:  fileExists("/var/run/reboot-required"),
 		CheckedAt:       time.Now().UTC(),
-		OutputPreview:   trimPreview(listOutput),
+		OutputPreview:   buildUpgradablePreview(listOutput),
 	}, nil
 }
 
@@ -96,23 +96,45 @@ func runCommand(command string, args ...string) (string, error) {
 }
 
 func parseUpgradableList(output string) (int, int) {
-	lines := strings.Split(output, "\n")
-	upgradableCount := 0
+	lines := extractUpgradableLines(output)
 	securityCount := 0
 
 	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || strings.HasPrefix(trimmed, "Listing...") {
-			continue
-		}
-
-		upgradableCount++
-		if securityPattern.MatchString(trimmed) {
+		if securityPattern.MatchString(line) {
 			securityCount++
 		}
 	}
 
-	return upgradableCount, securityCount
+	return len(lines), securityCount
+}
+
+func extractUpgradableLines(output string) []string {
+	lines := strings.Split(output, "\n")
+	upgradableLines := make([]string, 0, len(lines))
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "Listing...") || strings.HasPrefix(trimmed, "WARNING:") {
+			continue
+		}
+
+		if !strings.Contains(trimmed, "[upgradable from:") {
+			continue
+		}
+
+		upgradableLines = append(upgradableLines, trimmed)
+	}
+
+	return upgradableLines
+}
+
+func buildUpgradablePreview(output string) string {
+	lines := extractUpgradableLines(output)
+	if len(lines) == 0 {
+		return ""
+	}
+
+	return trimPreview(strings.Join(lines, "\n"))
 }
 
 func trimPreview(value string) string {

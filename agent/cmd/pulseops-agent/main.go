@@ -16,9 +16,10 @@ import (
 	"github.com/AsiliskServers/PulseOps/agent/internal/config"
 	"github.com/AsiliskServers/PulseOps/agent/internal/platform"
 	"github.com/AsiliskServers/PulseOps/agent/internal/state"
+	"github.com/AsiliskServers/PulseOps/agent/internal/update"
 )
 
-const version = "1.0.0"
+var version = "dev"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -117,6 +118,29 @@ func runService(args []string) error {
 		return err
 	}
 
+	checkForUpdate := func() (bool, error) {
+		if !cfg.AutoUpdate {
+			return false, nil
+		}
+
+		updated, nextVersion, err := update.CheckAndApply(context.Background(), cfg.ServerURL, version)
+		if err != nil {
+			return false, err
+		}
+
+		if updated {
+			log.Printf("agent updated from %s to %s, restarting service", version, nextVersion)
+		}
+
+		return updated, nil
+	}
+
+	if updated, err := checkForUpdate(); err != nil {
+		log.Printf("initial auto-update check failed: %v", err)
+	} else if updated {
+		return nil
+	}
+
 	currentState, err := state.Load(cfg.StateFile)
 	if err != nil {
 		if cfg.EnrollmentToken == "" {
@@ -150,6 +174,8 @@ func runService(args []string) error {
 	defer reportTicker.Stop()
 	jobTicker := time.NewTicker(time.Duration(cfg.JobPollIntervalSeconds) * time.Second)
 	defer jobTicker.Stop()
+	updateTicker := time.NewTicker(time.Duration(cfg.AutoUpdateIntervalSeconds) * time.Second)
+	defer updateTicker.Stop()
 
 	reportOnce := func() error {
 		summary, err := platform.RunRefresh()
@@ -235,6 +261,12 @@ func runService(args []string) error {
 		case <-jobTicker.C:
 			if err := handleJob(); err != nil {
 				log.Printf("job poll failed: %v", err)
+			}
+		case <-updateTicker.C:
+			if updated, err := checkForUpdate(); err != nil {
+				log.Printf("auto-update check failed: %v", err)
+			} else if updated {
+				return nil
 			}
 		}
 	}

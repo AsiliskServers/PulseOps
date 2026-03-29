@@ -13,9 +13,11 @@ type Config struct {
 	EnrollmentToken        string
 	Environment            string
 	AllowUpgrade           bool
+	AutoUpdate             bool
 	NameOverride           string
 	ReportIntervalSeconds  int
 	JobPollIntervalSeconds int
+	AutoUpdateIntervalSeconds int
 	StateFile              string
 }
 
@@ -54,10 +56,12 @@ func Load(path string) (Config, error) {
 		EnrollmentToken:        firstNonEmpty(values["ENROLLMENT_TOKEN"], os.Getenv("ENROLLMENT_TOKEN")),
 		Environment:            firstNonEmpty(values["ENVIRONMENT"], os.Getenv("ENVIRONMENT"), "production"),
 		AllowUpgrade:           parseBool(firstNonEmpty(values["ALLOW_UPGRADE"], os.Getenv("ALLOW_UPGRADE"), "true")),
+		AutoUpdate:             parseBool(firstNonEmpty(values["AUTO_UPDATE"], os.Getenv("AUTO_UPDATE"), "true")),
 		NameOverride:           firstNonEmpty(values["NAME_OVERRIDE"], os.Getenv("NAME_OVERRIDE")),
 		StateFile:              firstNonEmpty(values["STATE_FILE"], os.Getenv("STATE_FILE"), "/opt/pulseops-agent/state.json"),
-		ReportIntervalSeconds:  parseInt(firstNonEmpty(values["REPORT_INTERVAL_SECONDS"], os.Getenv("REPORT_INTERVAL_SECONDS"), "900")),
-		JobPollIntervalSeconds: parseInt(firstNonEmpty(values["JOB_POLL_INTERVAL_SECONDS"], os.Getenv("JOB_POLL_INTERVAL_SECONDS"), "30")),
+		ReportIntervalSeconds:  parseInt(firstNonEmpty(values["REPORT_INTERVAL_SECONDS"], os.Getenv("REPORT_INTERVAL_SECONDS"), "900"), 900),
+		JobPollIntervalSeconds: parseInt(firstNonEmpty(values["JOB_POLL_INTERVAL_SECONDS"], os.Getenv("JOB_POLL_INTERVAL_SECONDS"), "30"), 30),
+		AutoUpdateIntervalSeconds: parseInt(firstNonEmpty(values["AUTO_UPDATE_INTERVAL_SECONDS"], os.Getenv("AUTO_UPDATE_INTERVAL_SECONDS"), "3600"), 3600),
 	}
 
 	if cfg.ServerURL == "" {
@@ -89,10 +93,10 @@ func parseBool(value string) bool {
 	}
 }
 
-func parseInt(value string) int {
+func parseInt(value string, fallback int) int {
 	parsed, err := strconv.Atoi(strings.TrimSpace(value))
 	if err != nil || parsed <= 0 {
-		return 30
+		return fallback
 	}
 	return parsed
 }

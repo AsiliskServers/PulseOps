@@ -25,8 +25,12 @@ export async function registerPublicRoutes(
     try {
       await access(filePath);
       const buffer = await readFile(filePath);
-      reply.type("application/octet-stream");
-      reply.header("Content-Disposition", `attachment; filename="${name}"`);
+      if (name.endsWith(".json")) {
+        reply.type("application/json; charset=utf-8");
+      } else {
+        reply.type("application/octet-stream");
+        reply.header("Content-Disposition", `attachment; filename="${name}"`);
+      }
       return reply.send(buffer);
     } catch {
       return reply.status(404).send({ message: "Agent binary not found" });

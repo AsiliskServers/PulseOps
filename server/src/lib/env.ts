@@ -31,8 +31,8 @@ export type ServerEnv = {
 
 export function loadEnv(): ServerEnv {
   const port = Number(process.env.PORT ?? "4000");
-  const reportInterval = Number(process.env.AGENT_REPORT_INTERVAL_SECONDS ?? "900");
-  const pollInterval = Number(process.env.AGENT_JOB_POLL_INTERVAL_SECONDS ?? "30");
+  const reportInterval = Number(process.env.AGENT_REPORT_INTERVAL_SECONDS ?? "300");
+  const pollInterval = Number(process.env.AGENT_JOB_POLL_INTERVAL_SECONDS ?? "10");
   const staleAfter = Number(process.env.AGENT_STALE_AFTER_SECONDS ?? "1800");
   const offlineAfter = Number(process.env.AGENT_OFFLINE_AFTER_SECONDS ?? "7200");
 
