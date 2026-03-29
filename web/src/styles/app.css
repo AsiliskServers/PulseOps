@@ -707,15 +707,6 @@ pre {
   line-height: 1.6;
 }
 
-.note-block {
-  padding: 16px;
-  border-radius: 14px;
-  background: var(--surface-soft);
-  border: 1px solid var(--line);
-  color: var(--text);
-  line-height: 1.7;
-}
-
 .notes-form {
   display: grid;
   gap: 14px;

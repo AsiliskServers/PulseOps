@@ -1,4 +1,4 @@
-import { fetchJson } from "./client";
+import { ApiError, fetchJson } from "./client";
 import type { DashboardSummary, Job, ServerDetail, ServerPayload, ServerSummary } from "../types";
 
 export async function getSummary(): Promise<DashboardSummary> {
@@ -12,15 +12,6 @@ export async function listServers(): Promise<ServerSummary[]> {
 
 export async function getServer(id: string): Promise<ServerDetail> {
   const payload = await fetchJson<{ server: ServerDetail }>(`/servers/${id}`);
-  return payload.server;
-}
-
-export async function createServer(input: ServerPayload): Promise<ServerSummary> {
-  const payload = await fetchJson<{ server: ServerSummary }>("/servers", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-
   return payload.server;
 }
 
@@ -49,10 +40,27 @@ export async function queueBatchJobs(input: {
   serverIds: string[];
   type: "refresh" | "upgrade";
 }): Promise<{ queuedCount: number }> {
-  return fetchJson<{ queuedCount: number }>("/servers/batch/jobs", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  try {
+    return await fetchJson<{ queuedCount: number }>("/servers/batch/jobs", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.statusCode !== 404) {
+      throw error;
+    }
+
+    const endpoint = input.type === "upgrade" ? "upgrade" : "refresh";
+    await Promise.all(
+      input.serverIds.map((serverId) =>
+        fetchJson<{ job: Job }>(`/servers/${serverId}/${endpoint}`, {
+          method: "POST",
+        })
+      )
+    );
+
+    return { queuedCount: input.serverIds.length };
+  }
 }
 
 export async function triggerRefresh(id: string): Promise<Job> {

@@ -145,7 +145,7 @@ location /pulseops/api/ {
     proxy_pass http://127.0.0.1:4000/pulseops/api/;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Host $host;
 }
@@ -153,21 +153,21 @@ location /pulseops/api/ {
 location /pulseops/health {
     proxy_pass http://127.0.0.1:4000/pulseops/health;
     proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 
 location /pulseops/install-agent.sh {
     proxy_pass http://127.0.0.1:4000/pulseops/install-agent.sh;
     proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 
 location /pulseops/downloads/ {
     proxy_pass http://127.0.0.1:4000/pulseops/downloads/;
     proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 

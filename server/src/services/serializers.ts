@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import type { ServerEnv } from "../lib/env.js";
+import { isPendingJobStatus } from "../lib/jobs.js";
 import { deriveConnectivityStatus } from "./connectivity.js";
 
 export const serverListInclude = {
@@ -109,10 +110,7 @@ export function serializeServer(
     latestSnapshot: serializeSnapshot(server.snapshots[0]),
     latestJob: serializeJob(jobs[0]),
     pendingJobsCount:
-      pendingJobsCount ??
-      jobs.filter((job) =>
-        job.status === "queued" || job.status === "claimed" || job.status === "running"
-      ).length,
+      pendingJobsCount ?? jobs.filter((job) => isPendingJobStatus(job.status)).length,
   };
 }
 
@@ -125,11 +123,7 @@ export function serializeServerDetail(
     ...serializeServer(
       server,
       env,
-      pendingJobsCount ??
-        server.jobs.filter(
-          (job) =>
-            job.status === "queued" || job.status === "claimed" || job.status === "running"
-        ).length
+      pendingJobsCount ?? server.jobs.filter((job) => isPendingJobStatus(job.status)).length
     ),
     recentJobs: server.jobs
       .map((job) => serializeJob(job))

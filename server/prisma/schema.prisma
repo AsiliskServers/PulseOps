@@ -37,7 +37,6 @@ model Server {
   agentVersion         String?
   lastSeenAt           DateTime?
   lastReportAt         DateTime?
-  connectivityStatus   String           @default("offline")
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   snapshots            ServerSnapshot[]

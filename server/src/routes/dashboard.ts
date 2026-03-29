@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { pendingJobStatuses } from "../lib/jobs.js";
 import { prisma } from "../lib/prisma.js";
 import { requireSessionUser } from "../lib/session.js";
 import { deriveConnectivityStatus } from "../services/connectivity.js";
@@ -26,44 +27,64 @@ export async function registerDashboardRoutes(
       prisma.job.count({
         where: {
           status: {
-            in: ["queued", "claimed", "running"],
+            in: [...pendingJobStatuses],
           },
         },
       }),
     ]);
 
     const latestSnapshots = servers.flatMap((server) => server.snapshots.slice(0, 1));
-    const lastGlobalCheckAt =
-      latestSnapshots.length === 0
-        ? null
-        : new Date(
-            Math.max(...latestSnapshots.map((snapshot) => snapshot.lastCheckAt.getTime()))
-          ).toISOString();
+    let reachableCount = 0;
+    let upToDateCount = 0;
+    let pendingUpdateCount = 0;
+    let securityUpdateCount = 0;
+    let onlineCount = 0;
+    let staleCount = 0;
+    let offlineCount = 0;
+    let lastGlobalCheckAt: string | null = null;
+    let latestCheckTime = 0;
+
+    for (const server of servers) {
+      const status = deriveConnectivityStatus(server.lastSeenAt, env);
+
+      if (status === "online") {
+        onlineCount++;
+      } else if (status === "stale") {
+        staleCount++;
+      } else {
+        offlineCount++;
+      }
+    }
+
+    for (const snapshot of latestSnapshots) {
+      if (snapshot.reachable) {
+        reachableCount++;
+      }
+
+      if (snapshot.reachable && snapshot.upgradableCount === 0) {
+        upToDateCount++;
+      }
+
+      pendingUpdateCount += snapshot.upgradableCount;
+      securityUpdateCount += snapshot.securityCount;
+
+      const checkTime = snapshot.lastCheckAt.getTime();
+      if (checkTime > latestCheckTime) {
+        latestCheckTime = checkTime;
+        lastGlobalCheckAt = snapshot.lastCheckAt.toISOString();
+      }
+    }
 
     return reply.send({
       serverCount: servers.length,
-      reachableCount: latestSnapshots.filter((snapshot) => snapshot.reachable).length,
-      upToDateCount: latestSnapshots.filter(
-        (snapshot) => snapshot.reachable && snapshot.upgradableCount === 0
-      ).length,
-      pendingUpdateCount: latestSnapshots.reduce(
-        (sum, snapshot) => sum + snapshot.upgradableCount,
-        0
-      ),
-      securityUpdateCount: latestSnapshots.reduce(
-        (sum, snapshot) => sum + snapshot.securityCount,
-        0
-      ),
+      reachableCount,
+      upToDateCount,
+      pendingUpdateCount,
+      securityUpdateCount,
       lastGlobalCheckAt,
-      onlineCount: servers.filter(
-        (server) => deriveConnectivityStatus(server.lastSeenAt, env) === "online"
-      ).length,
-      staleCount: servers.filter(
-        (server) => deriveConnectivityStatus(server.lastSeenAt, env) === "stale"
-      ).length,
-      offlineCount: servers.filter(
-        (server) => deriveConnectivityStatus(server.lastSeenAt, env) === "offline"
-      ).length,
+      onlineCount,
+      staleCount,
+      offlineCount,
       queuedJobCount,
     });
   });

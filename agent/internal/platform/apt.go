@@ -25,7 +25,7 @@ type Summary struct {
 var securityPattern = regexp.MustCompile(`/[^ ]*security[^ ]*\s`)
 
 func RunRefresh() (Summary, error) {
-	updateOutput, err := runCommand("apt-get", "update")
+	_, err := runCommand("apt-get", "update")
 	if err != nil {
 		return Summary{}, err
 	}
@@ -43,7 +43,7 @@ func RunRefresh() (Summary, error) {
 		SecurityCount:   securityCount,
 		RebootRequired:  fileExists("/var/run/reboot-required"),
 		CheckedAt:       time.Now().UTC(),
-		OutputPreview:   trimPreview(updateOutput + "\n\n" + listOutput),
+		OutputPreview:   trimPreview(listOutput),
 	}, nil
 }
 
@@ -52,12 +52,12 @@ func RunUpgrade(allowUpgrade bool) (Summary, error) {
 		return Summary{}, ErrUpgradeDisabled
 	}
 
-	updateOutput, err := runCommand("apt-get", "update")
+	_, err := runCommand("apt-get", "update")
 	if err != nil {
 		return Summary{}, err
 	}
 
-	upgradeOutput, err := runCommand("apt-get", "upgrade", "-y")
+	_, err = runCommand("apt-get", "upgrade", "-y")
 	if err != nil {
 		return Summary{}, err
 	}
@@ -75,7 +75,7 @@ func RunUpgrade(allowUpgrade bool) (Summary, error) {
 		SecurityCount:   securityCount,
 		RebootRequired:  fileExists("/var/run/reboot-required"),
 		CheckedAt:       time.Now().UTC(),
-		OutputPreview:   trimPreview(updateOutput + "\n\n" + upgradeOutput + "\n\n" + listOutput),
+		OutputPreview:   trimPreview(listOutput),
 	}, nil
 }
 

@@ -83,7 +83,6 @@ export async function registerAgentRoutes(
           osVersion,
           agentVersion,
           lastSeenAt: now,
-          connectivityStatus: "online",
         },
       });
 
@@ -137,7 +136,6 @@ export async function registerAgentRoutes(
             osName: readOptionalString(body, "osName") ?? server.osName,
             osVersion: readOptionalString(body, "osVersion") ?? server.osVersion,
             agentVersion: readOptionalString(body, "agentVersion") ?? server.agentVersion,
-            connectivityStatus: "online",
           },
         }),
         prisma.serverSnapshot.create({
@@ -173,7 +171,6 @@ export async function registerAgentRoutes(
           },
           data: {
             lastSeenAt: now,
-            connectivityStatus: "online",
           },
         });
 
@@ -268,7 +265,6 @@ export async function registerAgentRoutes(
           },
           data: {
             lastSeenAt: new Date(),
-            connectivityStatus: "online",
           },
         }),
         prisma.job.update({
@@ -279,10 +275,7 @@ export async function registerAgentRoutes(
             status,
             startedAt,
             finishedAt,
-            outputPreview:
-              status === "running"
-                ? outputPreview ?? job.outputPreview ?? null
-                : outputPreview ?? job.outputPreview ?? null,
+            outputPreview: outputPreview ?? job.outputPreview ?? null,
             errorMessage: status === "running" ? null : errorMessage,
           },
         }),

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { pendingJobStatuses } from "../lib/jobs.js";
 import { prisma } from "../lib/prisma.js";
 import { requireSessionUser } from "../lib/session.js";
 import {
@@ -109,7 +110,7 @@ export async function registerServerRoutes(
         by: ["serverId"],
         where: {
           status: {
-            in: ["queued", "claimed", "running"],
+            in: [...pendingJobStatuses],
           },
         },
         _count: {
@@ -223,7 +224,7 @@ export async function registerServerRoutes(
         where: {
           serverId,
           status: {
-            in: ["queued", "claimed", "running"],
+            in: [...pendingJobStatuses],
           },
         },
       }),
@@ -388,7 +389,7 @@ export async function registerServerRoutes(
         where: {
           serverId,
           status: {
-            in: ["queued", "claimed", "running"],
+            in: [...pendingJobStatuses],
           },
         },
       }),
