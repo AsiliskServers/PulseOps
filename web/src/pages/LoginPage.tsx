@@ -19,52 +19,28 @@ export function LoginPage() {
 
   return (
     <div className="fullscreen-shell login-shell">
-      <div className="login-panel">
-        <aside className="login-aside">
-          <div className="login-brand">
-            <div className="brand-mark">P</div>
-            <div>
-              <p className="eyebrow">PulseOps</p>
-              <h1>Administration</h1>
-            </div>
-          </div>
+      <div className="login-stack">
+        <div className="login-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
 
-          <div className="login-copy">
-            <p className="login-intro">Acces reserve a la console centrale.</p>
-            <p className="login-subcopy">
-              Authentifiez-vous pour gerer le parc Debian, les jobs APT et les retours agents.
-            </p>
-          </div>
-
-          <div className="login-points">
-            <article className="login-point">
-              <strong>Acces securise</strong>
-              <span>Session admin locale protegee par cookie.</span>
-            </article>
-            <article className="login-point">
-              <strong>Parc central</strong>
-              <span>Serveurs, snapshots et historique au meme endroit.</span>
-            </article>
-            <article className="login-point">
-              <strong>Operations APT</strong>
-              <span>Refresh, upgrade et suivi des executions.</span>
-            </article>
-          </div>
-        </aside>
+        <div className="login-center-copy">
+          <p className="eyebrow login-eyebrow">PulseOps</p>
+          <h1>Connexion administrateur</h1>
+          <p className="login-subcopy">
+            Accedez a la console centrale et au pilotage des serveurs Debian.
+          </p>
+        </div>
 
         <form
-          className="login-card"
+          className="login-card minimal"
           onSubmit={(event) => {
             event.preventDefault();
             loginMutation.mutate();
           }}
         >
-          <div className="login-form-header">
-            <p className="eyebrow">Connexion</p>
-            <h2>Espace administrateur</h2>
-            <p className="login-helper">Saisissez les identifiants du compte initialise sur le serveur principal.</p>
-          </div>
-
           <label>
             <span>Email</span>
             <input
@@ -72,6 +48,7 @@ export function LoginPage() {
               autoComplete="username"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              placeholder="admin@exemple.fr"
               required
             />
           </label>
@@ -83,6 +60,7 @@ export function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              placeholder="Votre mot de passe"
               required
             />
           </label>
@@ -91,11 +69,15 @@ export function LoginPage() {
             <div className="alert error">{loginMutation.error.message}</div>
           ) : null}
 
-          <button className="primary-button wide" type="submit" disabled={loginMutation.isPending}>
-            {loginMutation.isPending ? "Connexion..." : "Se connecter"}
+          <button className="primary-button wide login-submit" type="submit" disabled={loginMutation.isPending}>
+            {loginMutation.isPending ? "Connexion..." : "Continuer"}
           </button>
 
-          <p className="login-footer">Acces strictement reserve a l'administration PulseOps.</p>
+          <div className="login-divider">
+            <span>Acces admin</span>
+          </div>
+
+          <p className="login-footer">Connexion reservee a l'administration PulseOps.</p>
         </form>
       </div>
     </div>
