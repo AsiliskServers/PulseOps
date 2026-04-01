@@ -623,6 +623,17 @@ pre {
   text-align: right;
 }
 
+.table-stack {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.table-stack small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .text-link {
   color: var(--accent);
   font-weight: 600;
@@ -634,7 +645,7 @@ pre {
 
 .table-head {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1.3fr) 160px 140px 160px;
+  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 160px;
   gap: 12px;
   padding: 0 16px 8px;
   font-size: 11px;
@@ -646,7 +657,7 @@ pre {
 
 .table-row {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1.3fr) 160px 140px 160px;
+  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 160px;
   gap: 12px;
   align-items: center;
   transition:

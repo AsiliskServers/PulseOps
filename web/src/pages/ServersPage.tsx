@@ -2,11 +2,18 @@ import { useDeferredValue, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { getSummary, listServers, queueBatchJobs } from "../api/servers";
-import { formatDate, resolveServerState } from "../lib/presentation";
+import {
+  formatDate,
+  resolveAgentVersionState,
+  resolveServerState,
+} from "../lib/presentation";
 
 export function ServersPage() {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [batchAction, setBatchAction] = useState<"refresh" | "upgrade" | "agent_update" | null>(
+    null
+  );
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const queryClient = useQueryClient();
 
@@ -27,7 +34,7 @@ export function ServersPage() {
       const haystack =
         `${server.name} ${server.environment} ${server.notes ?? ""} ${server.hostname ?? ""} ${
           server.osName ?? ""
-        }`.toLowerCase();
+        } ${server.agentVersion ?? ""}`.toLowerCase();
       return haystack.includes(deferredSearch);
     }) ?? [];
 
@@ -41,17 +48,21 @@ export function ServersPage() {
   }, [serversQuery.data]);
 
   const batchMutation = useMutation({
-    mutationFn: (type: "refresh" | "upgrade") =>
+    mutationFn: (type: "refresh" | "upgrade" | "agent_update") =>
       queueBatchJobs({
         serverIds: selectedIds,
         type,
       }),
     onSuccess: async () => {
+      setBatchAction(null);
       setSelectedIds([]);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["servers"] }),
         queryClient.invalidateQueries({ queryKey: ["summary"] }),
       ]);
+    },
+    onError: () => {
+      setBatchAction(null);
     },
   });
 
@@ -74,6 +85,11 @@ export function ServersPage() {
 
       return current.filter((id) => !visibleIds.includes(id));
     });
+  }
+
+  function runBatchAction(type: "refresh" | "upgrade" | "agent_update") {
+    setBatchAction(type);
+    batchMutation.mutate(type);
   }
 
   const topError =
@@ -134,7 +150,9 @@ export function ServersPage() {
             />
             <span>
               {selectedIds.length > 0
-                ? `${selectedIds.length} serveur${selectedIds.length > 1 ? "s" : ""} sélectionné${selectedIds.length > 1 ? "s" : ""}`
+                ? `${selectedIds.length} serveur${selectedIds.length > 1 ? "s" : ""} sélectionné${
+                    selectedIds.length > 1 ? "s" : ""
+                  }`
                 : "Sélectionner les serveurs visibles"}
             </span>
           </label>
@@ -143,18 +161,32 @@ export function ServersPage() {
             <button
               className="ghost-button"
               type="button"
-              onClick={() => batchMutation.mutate("refresh")}
+              onClick={() => runBatchAction("refresh")}
               disabled={!hasSelection || batchMutation.isPending}
             >
-              {batchMutation.isPending ? "Traitement..." : "Refresh sélection"}
+              {batchMutation.isPending && batchAction === "refresh"
+                ? "Refresh..."
+                : "Refresh sélection"}
             </button>
             <button
               className="primary-button"
               type="button"
-              onClick={() => batchMutation.mutate("upgrade")}
+              onClick={() => runBatchAction("upgrade")}
               disabled={!hasSelection || batchMutation.isPending}
             >
-              {batchMutation.isPending ? "Traitement..." : "Upgrade sélection"}
+              {batchMutation.isPending && batchAction === "upgrade"
+                ? "Upgrade..."
+                : "Upgrade sélection"}
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => runBatchAction("agent_update")}
+              disabled={!hasSelection || batchMutation.isPending}
+            >
+              {batchMutation.isPending && batchAction === "agent_update"
+                ? "MàJ agent..."
+                : "Mettre à jour l'agent"}
             </button>
           </div>
         </div>
@@ -163,6 +195,7 @@ export function ServersPage() {
           <span></span>
           <span>Serveur</span>
           <span>État</span>
+          <span>Agent</span>
           <span>Environnement</span>
           <span>Dernier retour</span>
         </div>
@@ -173,6 +206,8 @@ export function ServersPage() {
           ) : (
             servers.map((server) => {
               const state = resolveServerState(server);
+              const agentState = resolveAgentVersionState(server);
+
               return (
                 <div
                   key={server.id}
@@ -187,18 +222,28 @@ export function ServersPage() {
                       onChange={(event) => toggleServerSelection(server.id, event.target.checked)}
                     />
                   </label>
+
                   <div>
                     <Link className="table-name-link" to={`/servers/${server.id}`}>
                       <strong>{server.name}</strong>
                     </Link>
                     <p>{server.hostname ?? "Hostname inconnu"}</p>
                   </div>
-                  <div>
+
+                  <div className="table-stack">
                     <span className={`server-badge ${state.tone}`}>{state.label}</span>
+                    <small>{server.latestSnapshot?.upgradableCount ?? 0} update(s)</small>
                   </div>
+
+                  <div className="table-stack">
+                    <span className={`server-badge ${agentState.tone}`}>{agentState.label}</span>
+                    <small>{server.agentVersion ?? "Version inconnue"}</small>
+                  </div>
+
                   <div>
                     <span className="server-badge neutral">{server.environment}</span>
                   </div>
+
                   <div className="table-row-side">
                     <span>{formatDate(server.lastSeenAt)}</span>
                     <small>{server.pendingJobsCount} jobs</small>

@@ -38,7 +38,7 @@ export async function clearServerHistory(id: string): Promise<void> {
 
 export async function queueBatchJobs(input: {
   serverIds: string[];
-  type: "refresh" | "upgrade";
+  type: "refresh" | "upgrade" | "agent_update";
 }): Promise<{ queuedCount: number }> {
   try {
     return await fetchJson<{ queuedCount: number }>("/servers/batch/jobs", {
@@ -50,7 +50,12 @@ export async function queueBatchJobs(input: {
       throw error;
     }
 
-    const endpoint = input.type === "upgrade" ? "upgrade" : "refresh";
+    const endpoint =
+      input.type === "upgrade"
+        ? "upgrade"
+        : input.type === "agent_update"
+          ? "agent-update"
+          : "refresh";
     await Promise.all(
       input.serverIds.map((serverId) =>
         fetchJson<{ job: Job }>(`/servers/${serverId}/${endpoint}`, {
