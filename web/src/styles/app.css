@@ -557,6 +557,8 @@ pre {
 }
 
 .monitoring-constellation {
+  --monitoring-link-reach: 126px;
+  --monitoring-link-bend: 98px;
   display: grid;
   grid-template-columns: minmax(220px, 1fr) 280px minmax(220px, 1fr);
   gap: 28px;
@@ -683,8 +685,8 @@ pre {
 .monitoring-callout.left::before,
 .monitoring-callout.bottom-left::before {
   top: 50%;
-  right: -54px;
-  width: 54px;
+  right: calc(var(--monitoring-link-reach) * -1);
+  width: var(--monitoring-link-reach);
   border-top-width: 1.5px;
   transform: translateY(-50%);
 }
@@ -693,25 +695,25 @@ pre {
 .monitoring-callout.right::before,
 .monitoring-callout.bottom-right::before {
   top: 50%;
-  left: -54px;
-  width: 54px;
+  left: calc(var(--monitoring-link-reach) * -1);
+  width: var(--monitoring-link-reach);
   border-top-width: 1.5px;
   transform: translateY(-50%);
 }
 
 .monitoring-callout.top-left::after,
 .monitoring-callout.bottom-left::after {
-  right: -54px;
+  right: calc(var(--monitoring-link-reach) * -1);
   width: 0;
-  height: 88px;
+  height: var(--monitoring-link-bend);
   border-right-width: 1.5px;
 }
 
 .monitoring-callout.top-right::after,
 .monitoring-callout.bottom-right::after {
-  left: -54px;
+  left: calc(var(--monitoring-link-reach) * -1);
   width: 0;
-  height: 88px;
+  height: var(--monitoring-link-bend);
   border-left-width: 1.5px;
 }
 
