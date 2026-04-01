@@ -9,6 +9,7 @@ import {
   readRequiredString,
   validateEnvironment,
   normalizeJobType,
+  type JobType,
 } from "../lib/validators.js";
 import type { ServerEnv } from "../lib/env.js";
 import {
@@ -18,6 +19,7 @@ import {
   serverDetailInclude,
   serverListInclude,
 } from "../services/serializers.js";
+import { getLatestAgentVersion } from "../services/agent-release.js";
 
 function parseCreatePayload(body: unknown) {
   if (!isRecord(body)) {
@@ -81,7 +83,7 @@ export async function registerServerRoutes(
   app: FastifyInstance,
   env: ServerEnv
 ): Promise<void> {
-  async function queueJob(serverId: string, triggeredByUserId: string, type: "refresh" | "upgrade") {
+  async function queueJob(serverId: string, triggeredByUserId: string, type: JobType) {
     return prisma.job.create({
       data: {
         serverId,
@@ -99,7 +101,7 @@ export async function registerServerRoutes(
       return;
     }
 
-    const [servers, pendingJobs] = await Promise.all([
+    const [servers, pendingJobs, latestAgentVersion] = await Promise.all([
       prisma.server.findMany({
         orderBy: {
           createdAt: "asc",
@@ -117,6 +119,7 @@ export async function registerServerRoutes(
           _all: true,
         },
       }),
+      getLatestAgentVersion(),
     ]);
 
     const pendingCountByServer = new Map(
@@ -125,7 +128,10 @@ export async function registerServerRoutes(
 
     return reply.send({
       servers: servers.map((server) =>
-        serializeServer(server, env, pendingCountByServer.get(server.id) ?? 0)
+        serializeServer(server, env, {
+          pendingJobsCount: pendingCountByServer.get(server.id) ?? 0,
+          latestAgentVersion,
+        })
       ),
     });
   });
@@ -139,18 +145,21 @@ export async function registerServerRoutes(
 
     try {
       const payload = parseCreatePayload(request.body);
-      const server = await prisma.server.create({
-        data: {
-          name: payload.name,
-          environment: payload.environment,
-          notes: payload.notes,
-          isActive: payload.isActive,
-        },
-        include: serverListInclude,
-      });
+      const [server, latestAgentVersion] = await Promise.all([
+        prisma.server.create({
+          data: {
+            name: payload.name,
+            environment: payload.environment,
+            notes: payload.notes,
+            isActive: payload.isActive,
+          },
+          include: serverListInclude,
+        }),
+        getLatestAgentVersion(),
+      ]);
 
       return reply.status(201).send({
-        server: serializeServer(server, env),
+        server: serializeServer(server, env, { latestAgentVersion }),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create server";
@@ -213,7 +222,7 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const [server, pendingJobsCount] = await Promise.all([
+    const [server, pendingJobsCount, latestAgentVersion] = await Promise.all([
       prisma.server.findUnique({
         where: {
           id: serverId,
@@ -228,6 +237,7 @@ export async function registerServerRoutes(
           },
         },
       }),
+      getLatestAgentVersion(),
     ]);
 
     if (!server) {
@@ -235,7 +245,10 @@ export async function registerServerRoutes(
     }
 
     return reply.send({
-      server: serializeServerDetail(server, env, pendingJobsCount),
+      server: serializeServerDetail(server, env, {
+        pendingJobsCount,
+        latestAgentVersion,
+      }),
     });
   });
 
@@ -250,21 +263,24 @@ export async function registerServerRoutes(
 
     try {
       const payload = parseUpdatePayload(request.body);
-      const updated = await prisma.server.update({
-        where: {
-          id: serverId,
-        },
-        data: {
-          name: payload.name,
-          environment: payload.environment,
-          notes: payload.notes,
-          isActive: payload.isActive,
-        },
-        include: serverListInclude,
-      });
+      const [updated, latestAgentVersion] = await Promise.all([
+        prisma.server.update({
+          where: {
+            id: serverId,
+          },
+          data: {
+            name: payload.name,
+            environment: payload.environment,
+            notes: payload.notes,
+            isActive: payload.isActive,
+          },
+          include: serverListInclude,
+        }),
+        getLatestAgentVersion(),
+      ]);
 
       return reply.send({
-        server: serializeServer(updated, env),
+        server: serializeServer(updated, env, { latestAgentVersion }),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to update server";
@@ -368,6 +384,24 @@ export async function registerServerRoutes(
     }
 
     const job = await queueJob(serverId, user.id, "upgrade");
+    return reply.status(202).send({ job: serializeJob(job) });
+  });
+
+  app.post("/:id/agent-update", async (request, reply) => {
+    const user = await requireSessionUser(request, reply);
+
+    if (!user) {
+      return;
+    }
+
+    const serverId = String((request.params as { id: string }).id);
+    const server = await prisma.server.findUnique({ where: { id: serverId } });
+
+    if (!server) {
+      return reply.status(404).send({ message: "Server not found" });
+    }
+
+    const job = await queueJob(serverId, user.id, "agent_update");
     return reply.status(202).send({ job: serializeJob(job) });
   });
 

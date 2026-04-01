@@ -5,6 +5,7 @@ import {
   clearServerHistory,
   deleteServer,
   getServer,
+  triggerAgentUpdate,
   triggerRefresh,
   triggerUpgrade,
   updateServer,
@@ -13,6 +14,7 @@ import { ServerFormModal } from "../components/ServerFormModal";
 import {
   extractUpgradablePackages,
   formatDate,
+  resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
 import type { Job, ServerDetail, ServerPayload } from "../types";
@@ -24,6 +26,10 @@ function isLiveJob(job: Job): boolean {
 }
 
 function getLiveCommand(job: Job): string {
+  if (job.type === "agent_update") {
+    return "pulseops-agent self-update";
+  }
+
   if (job.type === "upgrade") {
     return "apt-get update && apt-get upgrade -y";
   }
@@ -33,25 +39,37 @@ function getLiveCommand(job: Job): string {
 
 function getLiveMessage(job: Job): string {
   if (job.status === "queued") {
-    return "Job en file d'attente. L'agent recuperera la commande au prochain polling.";
+    return job.type === "agent_update"
+      ? "Mise à jour agent en file d'attente. L'agent vérifiera la release au prochain polling."
+      : "Job en file d'attente. L'agent récupérera la commande au prochain polling.";
   }
 
   if (job.status === "claimed") {
-    return "Commande prise en charge par l'agent. Execution en preparation.";
+    return job.type === "agent_update"
+      ? "Commande de mise à jour agent prise en charge. Préparation du remplacement du binaire."
+      : "Commande prise en charge par l'agent. Exécution en préparation.";
   }
 
-  return "Commande en cours d'execution. La vue se rafraichit automatiquement.";
+  return job.type === "agent_update"
+    ? "Mise à jour agent en cours. Le service redémarrera automatiquement si une nouvelle version est appliquée."
+    : "Commande en cours d'exécution. La vue se rafraîchit automatiquement.";
 }
 
 function JobRow({ job }: { job: Job }) {
   const tone =
     job.status === "success" ? "ok" : job.status === "failed" ? "critical" : "pending";
+  const label =
+    job.type === "agent_update"
+      ? "Mise à jour agent"
+      : job.type === "upgrade"
+        ? "Upgrade APT"
+        : "Refresh APT";
 
   return (
     <article className="job-row">
       <div>
-        <strong>{job.type === "upgrade" ? "Upgrade APT" : "Refresh APT"}</strong>
-        <p>Cree le {formatDate(job.createdAt)}</p>
+        <strong>{label}</strong>
+        <p>Créé le {formatDate(job.createdAt)}</p>
       </div>
 
       <div className="job-row-side">
@@ -123,6 +141,17 @@ export function ServerDetailPage() {
     },
   });
 
+  const agentUpdateMutation = useMutation({
+    mutationFn: () => triggerAgentUpdate(serverId!),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
+        queryClient.invalidateQueries({ queryKey: ["servers"] }),
+        queryClient.invalidateQueries({ queryKey: ["summary"] }),
+      ]);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => deleteServer(serverId!),
     onSuccess: async () => {
@@ -168,18 +197,21 @@ export function ServerDetailPage() {
   });
 
   const state = server ? resolveServerState(server) : null;
+  const agentState = server ? resolveAgentVersionState(server) : null;
   const liveJob =
     server?.recentJobs.find(isLiveJob) ??
     (server?.latestJob && isLiveJob(server.latestJob) ? server.latestJob : null);
   const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
   const hasHistory = Boolean(server?.latestSnapshot) || (server?.recentJobs.length ?? 0) > 0;
   const notesDirty = notesDraft !== (server?.notes ?? "");
+  const agentUpdateLive = liveJob?.type === "agent_update";
   const topError =
     (detailQuery.error instanceof Error && detailQuery.error.message) ||
     (updateMutation.error instanceof Error && updateMutation.error.message) ||
     (notesMutation.error instanceof Error && notesMutation.error.message) ||
     (refreshMutation.error instanceof Error && refreshMutation.error.message) ||
     (upgradeMutation.error instanceof Error && upgradeMutation.error.message) ||
+    (agentUpdateMutation.error instanceof Error && agentUpdateMutation.error.message) ||
     (clearHistoryMutation.error instanceof Error && clearHistoryMutation.error.message) ||
     (deleteMutation.error instanceof Error && deleteMutation.error.message) ||
     null;
@@ -221,7 +253,12 @@ export function ServerDetailPage() {
         </div>
 
         <div className="page-header-side">
-          <span className={`status-pill ${state?.tone ?? "neutral"}`}>{state?.label ?? "--"}</span>
+          <div className="status-pill-group">
+            <span className={`status-pill ${state?.tone ?? "neutral"}`}>{state?.label ?? "--"}</span>
+            <span className={`status-pill ${agentState?.tone ?? "neutral"}`}>
+              {agentState?.label ?? "--"}
+            </span>
+          </div>
           <div className="inline-actions">
             <button
               className="ghost-button"
@@ -238,6 +275,18 @@ export function ServerDetailPage() {
               disabled={upgradeMutation.isPending}
             >
               {upgradeMutation.isPending ? "Upgrade..." : "Lancer upgrade"}
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => agentUpdateMutation.mutate()}
+              disabled={agentUpdateMutation.isPending || agentUpdateLive}
+            >
+              {agentUpdateMutation.isPending
+                ? "MàJ agent..."
+                : agentUpdateLive
+                  ? "Agent en update"
+                  : "Mettre à jour l'agent"}
             </button>
             <button className="ghost-button" type="button" onClick={() => setModalOpen(true)}>
               Modifier
@@ -262,7 +311,7 @@ export function ServerDetailPage() {
 
       <section className="detail-metrics">
         <article className="stat-card">
-          <span>Connectivite</span>
+          <span>Connectivité</span>
           <strong>{server.connectivityStatus}</strong>
         </article>
         <article className="stat-card">
@@ -270,7 +319,7 @@ export function ServerDetailPage() {
           <strong>{server.latestSnapshot?.upgradableCount ?? 0}</strong>
         </article>
         <article className="stat-card">
-          <span>Securite</span>
+          <span>Sécurité</span>
           <strong>{server.latestSnapshot?.securityCount ?? 0}</strong>
         </article>
         <article className="stat-card">
@@ -284,14 +333,14 @@ export function ServerDetailPage() {
           <section className="panel">
             <div className="panel-header">
               <div>
-                <p className="section-kicker">Synthese</p>
-                <h3>Etat du serveur</h3>
+                <p className="section-kicker">Synthèse</p>
+                <h3>État du serveur</h3>
               </div>
             </div>
 
             <div className="summary-grid">
               <article className="mini-summary">
-                <span>Derniere vue</span>
+                <span>Dernière vue</span>
                 <strong>{formatDate(server.lastSeenAt)}</strong>
               </article>
               <article className="mini-summary">
@@ -301,6 +350,10 @@ export function ServerDetailPage() {
               <article className="mini-summary">
                 <span>Agent</span>
                 <strong>{server.agentVersion ?? "--"}</strong>
+              </article>
+              <article className="mini-summary">
+                <span>Release agent</span>
+                <strong>{server.latestAgentVersion ?? "--"}</strong>
               </article>
               <article className="mini-summary">
                 <span>OS</span>
@@ -351,7 +404,13 @@ export function ServerDetailPage() {
                     <span />
                     <span />
                   </div>
-                  <strong>{liveJob.type === "upgrade" ? "upgrade en cours" : "refresh en cours"}</strong>
+                  <strong>
+                    {liveJob.type === "agent_update"
+                      ? "mise à jour agent en cours"
+                      : liveJob.type === "upgrade"
+                        ? "upgrade en cours"
+                        : "refresh en cours"}
+                  </strong>
                 </div>
 
                 <div className="terminal-body">
@@ -364,12 +423,14 @@ export function ServerDetailPage() {
                     <span>{getLiveMessage(liveJob)}</span>
                   </div>
                   <div className="terminal-output muted">
-                    Derniere transition: {formatDate(
+                    Dernière transition : {formatDate(
                       liveJob.startedAt ?? liveJob.claimedAt ?? liveJob.createdAt
                     )}
                   </div>
                   <div className="terminal-output muted">
-                    La liste finale des paquets s'affichera automatiquement a la fin du job.
+                    {liveJob.type === "agent_update"
+                      ? "Le statut agent sera mis à jour automatiquement après le redémarrage du service."
+                      : "La liste finale des paquets s'affichera automatiquement à la fin du job."}
                   </div>
                 </div>
               </div>
@@ -401,8 +462,8 @@ export function ServerDetailPage() {
               ) : (
                 <div className="empty-state">
                   {server.latestSnapshot.upgradableCount > 0
-                    ? "Le retour agent ne contient pas de liste detaillee exploitable."
-                    : "Aucun paquet en attente de mise a jour."}
+                    ? "Le retour agent ne contient pas de liste détaillée exploitable."
+                    : "Aucun paquet en attente de mise à jour."}
                 </div>
               )
             ) : (
@@ -413,8 +474,8 @@ export function ServerDetailPage() {
           <section className="panel">
             <div className="panel-header">
               <div>
-                <p className="section-kicker">Execution</p>
-                <h3>Historique recent</h3>
+                <p className="section-kicker">Exécution</p>
+                <h3>Historique récent</h3>
               </div>
 
               <button
@@ -423,7 +484,7 @@ export function ServerDetailPage() {
                 onClick={() => {
                   if (
                     window.confirm(
-                      "Vider l'historique de ce serveur ? Les jobs et snapshots seront supprimes."
+                      "Vider l'historique de ce serveur ? Les jobs et snapshots seront supprimés."
                     )
                   ) {
                     clearHistoryMutation.mutate();
@@ -437,7 +498,7 @@ export function ServerDetailPage() {
 
             <div className="job-list">
               {server.recentJobs.length === 0 ? (
-                <div className="empty-state">Aucun job lance pour ce serveur.</div>
+                <div className="empty-state">Aucun job lancé pour ce serveur.</div>
               ) : (
                 server.recentJobs.map((job) => <JobRow key={job.id} job={job} />)
               )}
@@ -456,11 +517,11 @@ export function ServerDetailPage() {
 
             <div className="summary-list">
               <div className="summary-item">
-                <span>Creation</span>
+                <span>Création</span>
                 <strong>{formatDate(server.createdAt)}</strong>
               </div>
               <div className="summary-item">
-                <span>Mise a jour</span>
+                <span>Mise à jour</span>
                 <strong>{formatDate(server.updatedAt)}</strong>
               </div>
               <div className="summary-item">
@@ -494,7 +555,7 @@ export function ServerDetailPage() {
                 value={notesDraft}
                 onChange={(event) => setNotesDraft(event.target.value)}
                 rows={8}
-                placeholder="Ajouter des notes sur ce serveur, la maintenance, le contexte reseau ou un contact..."
+                placeholder="Ajouter des notes sur ce serveur, la maintenance, le contexte réseau ou un contact..."
               />
 
               <div className="inline-actions">
@@ -504,7 +565,7 @@ export function ServerDetailPage() {
                   onClick={() => setNotesDraft(server.notes ?? "")}
                   disabled={!notesDirty || notesMutation.isPending}
                 >
-                  Reinitialiser
+                  Réinitialiser
                 </button>
                 <button
                   className="primary-button"

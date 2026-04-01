@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import type { ServerEnv } from "../lib/env.js";
 import { isPendingJobStatus } from "../lib/jobs.js";
 import { deriveConnectivityStatus } from "./connectivity.js";
+import { resolveAgentUpdateStatus } from "./agent-release.js";
 
 export const serverListInclude = {
   snapshots: {
@@ -48,6 +49,11 @@ type JobLike = Pick<
   "id" | "type" | "status" | "claimedAt" | "startedAt" | "finishedAt" | "outputPreview" | "errorMessage" | "createdAt" | "triggeredByUserId"
 >;
 
+type SerializeServerOptions = {
+  latestAgentVersion?: string | null;
+  pendingJobsCount?: number;
+};
+
 export function serializeSnapshot(snapshot: SnapshotRecord | null | undefined) {
   if (!snapshot) {
     return null;
@@ -87,9 +93,12 @@ export function serializeJob(job: JobLike | null | undefined) {
 export function serializeServer(
   server: ServerListRecord | ServerDetailRecord,
   env: ServerEnv,
-  pendingJobsCount?: number
+  options: SerializeServerOptions = {}
 ) {
   const jobs = "jobs" in server ? server.jobs : [];
+  const latestAgentVersion = options.latestAgentVersion ?? null;
+  const pendingJobsCount =
+    options.pendingJobsCount ?? jobs.filter((job) => isPendingJobStatus(job.status)).length;
 
   return {
     id: server.id,
@@ -102,6 +111,8 @@ export function serializeServer(
     osName: server.osName,
     osVersion: server.osVersion,
     agentVersion: server.agentVersion,
+    latestAgentVersion,
+    agentUpdateStatus: resolveAgentUpdateStatus(server.agentVersion, latestAgentVersion),
     lastSeenAt: server.lastSeenAt?.toISOString() ?? null,
     lastReportAt: server.lastReportAt?.toISOString() ?? null,
     connectivityStatus: deriveConnectivityStatus(server.lastSeenAt, env),
@@ -117,13 +128,18 @@ export function serializeServer(
 export function serializeServerDetail(
   server: ServerDetailRecord,
   env: ServerEnv,
-  pendingJobsCount?: number
+  options: SerializeServerOptions = {}
 ) {
   return {
     ...serializeServer(
       server,
       env,
-      pendingJobsCount ?? server.jobs.filter((job) => isPendingJobStatus(job.status)).length
+      {
+        ...options,
+        pendingJobsCount:
+          options.pendingJobsCount ??
+          server.jobs.filter((job) => isPendingJobStatus(job.status)).length,
+      }
     ),
     recentJobs: server.jobs
       .map((job) => serializeJob(job))

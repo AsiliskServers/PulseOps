@@ -45,9 +45,9 @@ export function AgentsPage() {
       <section className="page-header panel">
         <div className="page-heading">
           <p className="section-kicker">Agents</p>
-          <h2>Installation et enrollement</h2>
+          <h2>Installation et enrôlement</h2>
           <p className="page-copy">
-            Prepare le token, copie la commande d&apos;installation et suis la couverture agent.
+            Prépare le token, copie la commande d&apos;installation et suis la couverture agent.
           </p>
         </div>
         <div className="page-header-side">
@@ -65,18 +65,18 @@ export function AgentsPage() {
       <section className="steps-grid">
         <article className="step-card">
           <span>1</span>
-          <strong>Genere le token</strong>
-          <p>Regenerer si besoin, puis copier la valeur courante.</p>
+          <strong>Génère le token</strong>
+          <p>Régénérer si besoin, puis copier la valeur courante.</p>
         </article>
         <article className="step-card">
           <span>2</span>
           <strong>Installe l&apos;agent</strong>
-          <p>Execute la commande sur la Debian 13 cible avec les bons parametres.</p>
+          <p>Exécute la commande sur la Debian 13 cible avec les bons paramètres.</p>
         </article>
         <article className="step-card">
           <span>3</span>
-          <strong>Controle le retour</strong>
-          <p>Le serveur apparait ensuite dans le parc et remonte ses snapshots.</p>
+          <strong>Contrôle le retour</strong>
+          <p>Le serveur apparaît ensuite dans le parc et remonte ses snapshots.</p>
         </article>
       </section>
 
@@ -85,7 +85,7 @@ export function AgentsPage() {
           <div className="panel-header">
             <div>
               <p className="section-kicker">Token</p>
-              <h3>Enrollement</h3>
+              <h3>Enrôlement</h3>
             </div>
             <button
               className="ghost-button small"
@@ -93,7 +93,7 @@ export function AgentsPage() {
               onClick={() => rotateMutation.mutate()}
               disabled={rotateMutation.isPending}
             >
-              {rotateMutation.isPending ? "Rotation..." : "Regenerer"}
+              {rotateMutation.isPending ? "Rotation..." : "Régénérer"}
             </button>
           </div>
 
@@ -118,6 +118,14 @@ export function AgentsPage() {
                   : "--"}
               </strong>
             </div>
+            <div className="summary-item">
+              <span>MàJ agent</span>
+              <strong>
+                {enrollmentQuery.data
+                  ? `${enrollmentQuery.data.autoUpdateIntervalSeconds}s`
+                  : "--"}
+              </strong>
+            </div>
           </div>
 
           <div className="inline-actions">
@@ -130,7 +138,7 @@ export function AgentsPage() {
               }
               disabled={!enrollmentQuery.data}
             >
-              {copied === "token" ? "Token copie" : "Copier le token"}
+              {copied === "token" ? "Token copié" : "Copier le token"}
             </button>
           </div>
         </section>
@@ -150,7 +158,7 @@ export function AgentsPage() {
               }
               disabled={!enrollmentQuery.data}
             >
-              {copied === "command" ? "Commande copiee" : "Copier"}
+              {copied === "command" ? "Commande copiée" : "Copier"}
             </button>
           </div>
 

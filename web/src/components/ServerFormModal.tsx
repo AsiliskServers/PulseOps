@@ -12,8 +12,8 @@ type Props = {
 const environmentOptions = [
   { value: "production", label: "Production" },
   { value: "staging", label: "Staging" },
-  { value: "internal", label: "Internal" },
-  { value: "other", label: "Other" },
+  { value: "internal", label: "Interne" },
+  { value: "other", label: "Autre" },
 ] as const;
 
 export function ServerFormModal({
@@ -102,7 +102,7 @@ export function ServerFormModal({
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={4}
-              placeholder="Fenetre de maintenance, precision reseau, contact..."
+              placeholder="Fenêtre de maintenance, précision réseau, contact..."
             />
           </label>
 

@@ -16,7 +16,7 @@ export function resolveServerState(server: ServerSummary | ServerDetail): {
   tone: "ok" | "pending" | "critical" | "neutral";
 } {
   if (server.latestJob?.status === "failed") {
-    return { label: "Echec recent", tone: "critical" };
+    return { label: "Échec récent", tone: "critical" };
   }
 
   if (!server.latestSnapshot) {
@@ -24,26 +24,41 @@ export function resolveServerState(server: ServerSummary | ServerDetail): {
   }
 
   if (server.connectivityStatus === "offline") {
-    return { label: "Offline", tone: "critical" };
+    return { label: "Hors ligne", tone: "critical" };
   }
 
   if (server.connectivityStatus === "stale") {
-    return { label: "Stale", tone: "pending" };
+    return { label: "À surveiller", tone: "pending" };
   }
 
   if (!server.latestSnapshot.reachable) {
-    return { label: "Degrade", tone: "critical" };
+    return { label: "Dégradé", tone: "critical" };
   }
 
   if (server.latestSnapshot.securityCount > 0) {
-    return { label: "Securite", tone: "critical" };
+    return { label: "Sécurité", tone: "critical" };
   }
 
   if (server.latestSnapshot.upgradableCount > 0) {
-    return { label: "Maj en attente", tone: "pending" };
+    return { label: "MàJ en attente", tone: "pending" };
   }
 
-  return { label: "A jour", tone: "ok" };
+  return { label: "À jour", tone: "ok" };
+}
+
+export function resolveAgentVersionState(server: ServerSummary | ServerDetail): {
+  label: string;
+  tone: "ok" | "pending" | "neutral";
+} {
+  if (!server.agentVersion || !server.latestAgentVersion || server.agentUpdateStatus === "unknown") {
+    return { label: "Version agent inconnue", tone: "neutral" };
+  }
+
+  if (server.agentUpdateStatus === "update_available") {
+    return { label: "MàJ agent dispo", tone: "pending" };
+  }
+
+  return { label: "Agent à jour", tone: "ok" };
 }
 
 export function extractUpgradablePackages(value: string | null | undefined): string[] {

@@ -15,7 +15,8 @@ PulseOps supervise et orchestre les mises a jour Debian 13 via un serveur princi
 3. Le serveur Debian 13 telecharge le binaire agent et s'enrole automatiquement
 4. L'agent remonte periodiquement son etat via HTTPS
 5. L'agent poll les jobs `refresh` et `upgrade`
-6. Le main centralise snapshots, jobs et historiques
+6. L'agent peut aussi executer une mise a jour manuelle de son binaire
+7. Le main centralise snapshots, jobs et historiques
 
 ## Backend local
 
@@ -42,6 +43,7 @@ APP_BASE_PATH=/pulseops
 APP_PUBLIC_URL=https://app.asilisk.fr/pulseops
 AGENT_REPORT_INTERVAL_SECONDS=300
 AGENT_JOB_POLL_INTERVAL_SECONDS=10
+AGENT_AUTO_UPDATE_INTERVAL_SECONDS=900
 AGENT_STALE_AFTER_SECONDS=1800
 AGENT_OFFLINE_AFTER_SECONDS=7200
 ```
@@ -121,6 +123,12 @@ Le script :
 - lance `pulseops-agent enroll`
 - installe et active `systemd`
 
+Par defaut :
+
+- l'agent remonte un report toutes les `5 min`
+- il poll les jobs toutes les `10 s`
+- il verifie les nouvelles releases agent toutes les `15 min`
+
 ## Reverse proxy
 
 En production, le plus simple est :
@@ -185,4 +193,4 @@ Le frontend build doit etre genere avec la base `/pulseops/`, puis copie dans `/
 - Aucun jeu de donnees d'exemple n'est insere en base.
 - Le premier compte admin est cree seulement si la base est vide et que `ADMIN_EMAIL` et `ADMIN_PASSWORD` sont fournis.
 - L'agent n'execute jamais `dist-upgrade` ni `full-upgrade`.
-- Les actions `refresh` et `upgrade` sont asynchrones : le main cree un job, l'agent le recupere ensuite par polling.
+- Les actions `refresh`, `upgrade` et `agent_update` sont asynchrones : le main cree un job, l'agent le recupere ensuite par polling.

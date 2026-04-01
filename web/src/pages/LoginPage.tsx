@@ -30,7 +30,7 @@ export function LoginPage() {
           <p className="eyebrow login-eyebrow">PulseOps</p>
           <h1>Connexion administrateur</h1>
           <p className="login-subcopy">
-            Accedez a la console centrale et au pilotage des serveurs Debian.
+            Accédez à la console centrale et au pilotage des serveurs Debian.
           </p>
         </div>
 
@@ -74,10 +74,10 @@ export function LoginPage() {
           </button>
 
           <div className="login-divider">
-            <span>Acces admin</span>
+            <span>Accès admin</span>
           </div>
 
-          <p className="login-footer">Connexion reservee a l'administration PulseOps.</p>
+          <p className="login-footer">Connexion réservée à l'administration PulseOps.</p>
         </form>
       </div>
     </div>

@@ -25,6 +25,7 @@ export async function registerSettingsRoutes(
       publicUrl: env.appPublicUrl,
       reportIntervalSeconds: env.agentReportIntervalSeconds,
       jobPollIntervalSeconds: env.agentJobPollIntervalSeconds,
+      autoUpdateIntervalSeconds: env.agentAutoUpdateIntervalSeconds,
       installCommand: buildInstallCommand(env.appPublicUrl, token),
     });
   });
@@ -43,6 +44,7 @@ export async function registerSettingsRoutes(
       publicUrl: env.appPublicUrl,
       reportIntervalSeconds: env.agentReportIntervalSeconds,
       jobPollIntervalSeconds: env.agentJobPollIntervalSeconds,
+      autoUpdateIntervalSeconds: env.agentAutoUpdateIntervalSeconds,
       installCommand: buildInstallCommand(env.appPublicUrl, token),
     });
   });

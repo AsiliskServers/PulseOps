@@ -25,6 +25,7 @@ export type ServerEnv = {
   appPublicUrl: string;
   agentReportIntervalSeconds: number;
   agentJobPollIntervalSeconds: number;
+  agentAutoUpdateIntervalSeconds: number;
   agentStaleAfterSeconds: number;
   agentOfflineAfterSeconds: number;
 };
@@ -33,6 +34,7 @@ export function loadEnv(): ServerEnv {
   const port = Number(process.env.PORT ?? "4000");
   const reportInterval = Number(process.env.AGENT_REPORT_INTERVAL_SECONDS ?? "300");
   const pollInterval = Number(process.env.AGENT_JOB_POLL_INTERVAL_SECONDS ?? "10");
+  const autoUpdateInterval = Number(process.env.AGENT_AUTO_UPDATE_INTERVAL_SECONDS ?? "900");
   const staleAfter = Number(process.env.AGENT_STALE_AFTER_SECONDS ?? "1800");
   const offlineAfter = Number(process.env.AGENT_OFFLINE_AFTER_SECONDS ?? "7200");
 
@@ -40,6 +42,7 @@ export function loadEnv(): ServerEnv {
     Number.isNaN(port) ||
     Number.isNaN(reportInterval) ||
     Number.isNaN(pollInterval) ||
+    Number.isNaN(autoUpdateInterval) ||
     Number.isNaN(staleAfter) ||
     Number.isNaN(offlineAfter)
   ) {
@@ -61,6 +64,7 @@ export function loadEnv(): ServerEnv {
     appPublicUrl: process.env.APP_PUBLIC_URL ?? `https://app.asilisk.fr${appBasePath}`,
     agentReportIntervalSeconds: reportInterval,
     agentJobPollIntervalSeconds: pollInterval,
+    agentAutoUpdateIntervalSeconds: autoUpdateInterval,
     agentStaleAfterSeconds: staleAfter,
     agentOfflineAfterSeconds: offlineAfter,
   };

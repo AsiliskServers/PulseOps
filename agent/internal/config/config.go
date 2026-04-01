@@ -9,16 +9,16 @@ import (
 )
 
 type Config struct {
-	ServerURL              string
-	EnrollmentToken        string
-	Environment            string
-	AllowUpgrade           bool
-	AutoUpdate             bool
-	NameOverride           string
-	ReportIntervalSeconds  int
-	JobPollIntervalSeconds int
+	ServerURL                 string
+	EnrollmentToken           string
+	Environment               string
+	AllowUpgrade              bool
+	AutoUpdate                bool
+	NameOverride              string
+	ReportIntervalSeconds     int
+	JobPollIntervalSeconds    int
 	AutoUpdateIntervalSeconds int
-	StateFile              string
+	StateFile                 string
 }
 
 func Load(path string) (Config, error) {
@@ -52,16 +52,16 @@ func Load(path string) (Config, error) {
 	}
 
 	cfg := Config{
-		ServerURL:              firstNonEmpty(values["SERVER_URL"], os.Getenv("SERVER_URL")),
-		EnrollmentToken:        firstNonEmpty(values["ENROLLMENT_TOKEN"], os.Getenv("ENROLLMENT_TOKEN")),
-		Environment:            firstNonEmpty(values["ENVIRONMENT"], os.Getenv("ENVIRONMENT"), "production"),
-		AllowUpgrade:           parseBool(firstNonEmpty(values["ALLOW_UPGRADE"], os.Getenv("ALLOW_UPGRADE"), "true")),
-		AutoUpdate:             parseBool(firstNonEmpty(values["AUTO_UPDATE"], os.Getenv("AUTO_UPDATE"), "true")),
-		NameOverride:           firstNonEmpty(values["NAME_OVERRIDE"], os.Getenv("NAME_OVERRIDE")),
-		StateFile:              firstNonEmpty(values["STATE_FILE"], os.Getenv("STATE_FILE"), "/opt/pulseops-agent/state.json"),
-		ReportIntervalSeconds:  parseInt(firstNonEmpty(values["REPORT_INTERVAL_SECONDS"], os.Getenv("REPORT_INTERVAL_SECONDS"), "900"), 900),
-		JobPollIntervalSeconds: parseInt(firstNonEmpty(values["JOB_POLL_INTERVAL_SECONDS"], os.Getenv("JOB_POLL_INTERVAL_SECONDS"), "30"), 30),
-		AutoUpdateIntervalSeconds: parseInt(firstNonEmpty(values["AUTO_UPDATE_INTERVAL_SECONDS"], os.Getenv("AUTO_UPDATE_INTERVAL_SECONDS"), "3600"), 3600),
+		ServerURL:                 firstNonEmpty(values["SERVER_URL"], os.Getenv("SERVER_URL")),
+		EnrollmentToken:           firstNonEmpty(values["ENROLLMENT_TOKEN"], os.Getenv("ENROLLMENT_TOKEN")),
+		Environment:               firstNonEmpty(values["ENVIRONMENT"], os.Getenv("ENVIRONMENT"), "production"),
+		AllowUpgrade:              parseBool(firstNonEmpty(values["ALLOW_UPGRADE"], os.Getenv("ALLOW_UPGRADE"), "true")),
+		AutoUpdate:                parseBool(firstNonEmpty(values["AUTO_UPDATE"], os.Getenv("AUTO_UPDATE"), "true")),
+		NameOverride:              firstNonEmpty(values["NAME_OVERRIDE"], os.Getenv("NAME_OVERRIDE")),
+		StateFile:                 firstNonEmpty(values["STATE_FILE"], os.Getenv("STATE_FILE"), "/opt/pulseops-agent/state.json"),
+		ReportIntervalSeconds:     parseInt(firstNonEmpty(values["REPORT_INTERVAL_SECONDS"], os.Getenv("REPORT_INTERVAL_SECONDS"), "300"), 300),
+		JobPollIntervalSeconds:    parseInt(firstNonEmpty(values["JOB_POLL_INTERVAL_SECONDS"], os.Getenv("JOB_POLL_INTERVAL_SECONDS"), "10"), 10),
+		AutoUpdateIntervalSeconds: parseInt(firstNonEmpty(values["AUTO_UPDATE_INTERVAL_SECONDS"], os.Getenv("AUTO_UPDATE_INTERVAL_SECONDS"), "900"), 900),
 	}
 
 	if cfg.ServerURL == "" {

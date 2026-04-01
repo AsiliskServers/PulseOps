@@ -29,7 +29,7 @@ export type ServerSnapshot = {
 
 export type Job = {
   id: string;
-  type: "refresh" | "upgrade" | string;
+  type: "refresh" | "upgrade" | "agent_update" | string;
   status: "queued" | "running" | "success" | "failed" | string;
   claimedAt: string | null;
   startedAt: string | null;
@@ -51,6 +51,8 @@ export type ServerSummary = {
   osName: string | null;
   osVersion: string | null;
   agentVersion: string | null;
+  latestAgentVersion: string | null;
+  agentUpdateStatus: "up_to_date" | "update_available" | "unknown" | string;
   lastSeenAt: string | null;
   lastReportAt: string | null;
   connectivityStatus: "online" | "stale" | "offline" | string;
@@ -77,5 +79,6 @@ export type EnrollmentSettings = {
   publicUrl: string;
   reportIntervalSeconds: number;
   jobPollIntervalSeconds: number;
+  autoUpdateIntervalSeconds: number;
   installCommand: string;
 };

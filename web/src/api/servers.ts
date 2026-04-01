@@ -78,3 +78,11 @@ export async function triggerUpgrade(id: string): Promise<Job> {
 
   return payload.job;
 }
+
+export async function triggerAgentUpdate(id: string): Promise<Job> {
+  const payload = await fetchJson<{ job: Job }>(`/servers/${id}/agent-update`, {
+    method: "POST",
+  });
+
+  return payload.job;
+}

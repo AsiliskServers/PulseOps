@@ -1,5 +1,5 @@
 export type EnvironmentValue = "production" | "staging" | "internal" | "other";
-export type JobType = "refresh" | "upgrade";
+export type JobType = "refresh" | "upgrade" | "agent_update";
 
 const ENVIRONMENTS = new Set<EnvironmentValue>(["production", "staging", "internal", "other"]);
 
@@ -46,7 +46,7 @@ export function validateEnvironment(value: string): EnvironmentValue {
 }
 
 export function normalizeJobType(value: string): JobType {
-  if (value !== "refresh" && value !== "upgrade") {
+  if (value !== "refresh" && value !== "upgrade" && value !== "agent_update") {
     throw new Error("Invalid job type");
   }
 

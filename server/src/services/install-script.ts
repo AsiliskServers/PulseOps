@@ -28,5 +28,9 @@ export async function buildInstallScript(env: ServerEnv): Promise<string> {
   return template
     .replaceAll("__DEFAULT_SERVER_URL__", env.appPublicUrl)
     .replaceAll("__DEFAULT_REPORT_INTERVAL__", String(env.agentReportIntervalSeconds))
-    .replaceAll("__DEFAULT_POLL_INTERVAL__", String(env.agentJobPollIntervalSeconds));
+    .replaceAll("__DEFAULT_POLL_INTERVAL__", String(env.agentJobPollIntervalSeconds))
+    .replaceAll(
+      "__DEFAULT_AUTO_UPDATE_INTERVAL__",
+      String(env.agentAutoUpdateIntervalSeconds)
+    );
 }

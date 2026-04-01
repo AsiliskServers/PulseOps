@@ -35,14 +35,14 @@ export function OverviewPage() {
       <section className="page-header panel">
         <div className="page-heading">
           <p className="section-kicker">Accueil</p>
-          <h2>Vue generale du parc</h2>
+          <h2>Vue générale du parc</h2>
           <p className="page-copy">
-            Resume des serveurs, des updates a traiter et des derniers retours agents.
+            Résumé des serveurs, des updates à traiter et des derniers retours agents.
           </p>
         </div>
         <div className="page-header-side">
           <div className="hero-stat">
-            <span>Dernier check</span>
+            <span>Dernière vérification</span>
             <strong>{formatDate(summaryQuery.data?.lastGlobalCheckAt)}</strong>
           </div>
           <div className="hero-stat">
@@ -75,8 +75,8 @@ export function OverviewPage() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="section-kicker">Priorites</p>
-              <h3>Serveurs a suivre</h3>
+              <p className="section-kicker">Priorités</p>
+              <h3>Serveurs à suivre</h3>
             </div>
             <Link className="text-link" to="/servers">
               Voir tous les serveurs
@@ -109,26 +109,26 @@ export function OverviewPage() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="section-kicker">Repartition</p>
-              <h3>Etat du parc</h3>
+              <p className="section-kicker">Répartition</p>
+              <h3>État du parc</h3>
             </div>
           </div>
 
           <div className="summary-grid">
             <article className="mini-summary">
-              <span>Reachable</span>
+              <span>Joignables</span>
               <strong>{summaryQuery.data?.reachableCount ?? 0}</strong>
             </article>
             <article className="mini-summary">
-              <span>A jour</span>
+              <span>À jour</span>
               <strong>{summaryQuery.data?.upToDateCount ?? 0}</strong>
             </article>
             <article className="mini-summary">
-              <span>Stale</span>
+              <span>À surveiller</span>
               <strong>{summaryQuery.data?.staleCount ?? 0}</strong>
             </article>
             <article className="mini-summary">
-              <span>Correctifs securite</span>
+              <span>Correctifs sécurité</span>
               <strong>{summaryQuery.data?.securityUpdateCount ?? 0}</strong>
             </article>
             <article className="mini-summary">

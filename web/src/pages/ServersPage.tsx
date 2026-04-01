@@ -88,16 +88,16 @@ export function ServersPage() {
         <div className="page-heading">
           <p className="section-kicker">Parc</p>
           <h2>Inventaire serveurs</h2>
-          <p className="page-copy">Liste detaillee, etat courant et acces rapide a chaque fiche.</p>
+          <p className="page-copy">Liste détaillée, état courant et accès rapide à chaque fiche.</p>
         </div>
 
         <div className="page-header-side compact-stats">
           <div className="hero-stat">
-            <span>A jour</span>
+            <span>À jour</span>
             <strong>{summaryQuery.data?.upToDateCount ?? 0}</strong>
           </div>
           <div className="hero-stat">
-            <span>Securite</span>
+            <span>Sécurité</span>
             <strong>{summaryQuery.data?.securityUpdateCount ?? 0}</strong>
           </div>
         </div>
@@ -117,7 +117,7 @@ export function ServersPage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Nom, hostname, environnement..."
+              placeholder="Nom, hostname, environnement…"
             />
           </label>
         </div>
@@ -134,8 +134,8 @@ export function ServersPage() {
             />
             <span>
               {selectedIds.length > 0
-                ? `${selectedIds.length} serveur${selectedIds.length > 1 ? "s" : ""} selectionne${selectedIds.length > 1 ? "s" : ""}`
-                : "Selectionner les serveurs visibles"}
+                ? `${selectedIds.length} serveur${selectedIds.length > 1 ? "s" : ""} sélectionné${selectedIds.length > 1 ? "s" : ""}`
+                : "Sélectionner les serveurs visibles"}
             </span>
           </label>
 
@@ -146,7 +146,7 @@ export function ServersPage() {
               onClick={() => batchMutation.mutate("refresh")}
               disabled={!hasSelection || batchMutation.isPending}
             >
-              {batchMutation.isPending ? "Traitement..." : "Refresh selection"}
+              {batchMutation.isPending ? "Traitement..." : "Refresh sélection"}
             </button>
             <button
               className="primary-button"
@@ -154,7 +154,7 @@ export function ServersPage() {
               onClick={() => batchMutation.mutate("upgrade")}
               disabled={!hasSelection || batchMutation.isPending}
             >
-              {batchMutation.isPending ? "Traitement..." : "Upgrade selection"}
+              {batchMutation.isPending ? "Traitement..." : "Upgrade sélection"}
             </button>
           </div>
         </div>
@@ -162,14 +162,14 @@ export function ServersPage() {
         <div className="table-head">
           <span></span>
           <span>Serveur</span>
-          <span>Etat</span>
+          <span>État</span>
           <span>Environnement</span>
           <span>Dernier retour</span>
         </div>
 
         <div className="server-table">
           {servers.length === 0 ? (
-            <div className="empty-state">Aucun serveur ne correspond a ce filtre.</div>
+            <div className="empty-state">Aucun serveur ne correspond à ce filtre.</div>
           ) : (
             servers.map((server) => {
               const state = resolveServerState(server);

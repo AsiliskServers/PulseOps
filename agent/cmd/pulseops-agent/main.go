@@ -186,13 +186,13 @@ func runService(args []string) error {
 		return client.Report(ctx, currentState.AgentID, currentState.AgentSecret, meta, summary)
 	}
 
-	handleJob := func() error {
+	handleJob := func() (bool, error) {
 		job, err := client.ClaimJob(ctx, currentState.AgentID, currentState.AgentSecret)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if job == nil {
-			return nil
+			return false, nil
 		}
 
 		startedAt := time.Now().UTC()
@@ -201,22 +201,38 @@ func runService(args []string) error {
 			StartedAt:  startedAt,
 			FinishedAt: time.Time{},
 		}); err != nil {
-			return err
+			return false, err
 		}
 
 		var summary platform.Summary
 		var execErr error
+		output := ""
+		shouldRestart := false
 
 		switch job.Type {
 		case "refresh":
 			summary, execErr = platform.RunRefresh()
 		case "upgrade":
 			summary, execErr = platform.RunUpgrade(cfg.AllowUpgrade)
+		case "agent_update":
+			var updated bool
+			var nextVersion string
+			updated, nextVersion, execErr = update.CheckAndApply(ctx, cfg.ServerURL, version)
+			if execErr == nil {
+				if updated {
+					shouldRestart = true
+					output = fmt.Sprintf("Agent updated from %s to %s. Restarting service.", version, nextVersion)
+				} else if nextVersion != "" {
+					output = fmt.Sprintf("Agent already up to date (%s).", nextVersion)
+				} else {
+					output = fmt.Sprintf("Agent already up to date (%s).", version)
+				}
+			}
 		default:
 			execErr = fmt.Errorf("unsupported job type %q", job.Type)
 		}
 
-		if execErr == nil {
+		if execErr == nil && job.Type != "agent_update" {
 			if err := client.Report(ctx, currentState.AgentID, currentState.AgentSecret, meta, summary); err != nil {
 				log.Printf("report after job failed: %v", err)
 			}
@@ -224,7 +240,9 @@ func runService(args []string) error {
 
 		status := "success"
 		errorMessage := ""
-		output := summary.OutputPreview
+		if output == "" {
+			output = summary.OutputPreview
+		}
 		if execErr != nil {
 			status = "failed"
 			errorMessage = execErr.Error()
@@ -233,21 +251,28 @@ func runService(args []string) error {
 			}
 		}
 
-		return client.SendJobResult(ctx, currentState.AgentID, currentState.AgentSecret, job.ID, agent.JobResultRequest{
+		sendErr := client.SendJobResult(ctx, currentState.AgentID, currentState.AgentSecret, job.ID, agent.JobResultRequest{
 			Status:        status,
 			StartedAt:     startedAt,
 			FinishedAt:    time.Now().UTC(),
 			OutputPreview: output,
 			ErrorMessage:  errorMessage,
 		})
+
+		return shouldRestart, sendErr
 	}
 
 	if err := reportOnce(); err != nil {
 		log.Printf("initial report failed: %v", err)
 	}
 
-	if err := handleJob(); err != nil {
+	if shouldRestart, err := handleJob(); err != nil {
 		log.Printf("initial job poll failed: %v", err)
+		if shouldRestart {
+			return nil
+		}
+	} else if shouldRestart {
+		return nil
 	}
 
 	for {
@@ -259,8 +284,13 @@ func runService(args []string) error {
 				log.Printf("periodic report failed: %v", err)
 			}
 		case <-jobTicker.C:
-			if err := handleJob(); err != nil {
+			if shouldRestart, err := handleJob(); err != nil {
 				log.Printf("job poll failed: %v", err)
+				if shouldRestart {
+					return nil
+				}
+			} else if shouldRestart {
+				return nil
 			}
 		case <-updateTicker.C:
 			if updated, err := checkForUpdate(); err != nil {

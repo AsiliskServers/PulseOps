@@ -75,7 +75,7 @@ export function AppLayout() {
           onClick={() => logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
         >
-          {logoutMutation.isPending ? "Deconnexion..." : "Deconnexion"}
+          {logoutMutation.isPending ? "Déconnexion..." : "Déconnexion"}
         </button>
       </aside>
 

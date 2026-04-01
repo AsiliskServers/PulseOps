@@ -22,7 +22,7 @@ export function RequireAuth() {
   });
 
   if (sessionQuery.isLoading) {
-    return <FullScreenState title="Chargement" body="Verification de votre acces..." />;
+    return <FullScreenState title="Chargement" body="Vérification de votre accès..." />;
   }
 
   if (sessionQuery.isError) {
