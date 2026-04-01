@@ -430,7 +430,14 @@ export function ServersPage() {
 
                 <div className="table-row-side">
                   <span>{formatDate(server.lastSeenAt)}</span>
-                  <small>{server.pendingJobsCount} jobs</small>
+                  <small
+                    className={`table-jobs-indicator ${
+                      server.pendingJobsCount > 0 ? "live" : "idle"
+                    }`}
+                  >
+                    <span className="table-jobs-dot" aria-hidden="true" />
+                    <span>{server.pendingJobsCount} jobs</span>
+                  </small>
                 </div>
               </div>
             ))

@@ -3,6 +3,14 @@ import { Link } from "react-router-dom";
 import { getSummary, listServers } from "../api/servers";
 import { formatDate, resolveServerState } from "../lib/presentation";
 
+type MonitoringSlice = {
+  key: string;
+  label: string;
+  description: string;
+  count: number;
+  color: string;
+};
+
 export function OverviewPage() {
   const summaryQuery = useQuery({
     queryKey: ["summary"],
@@ -30,6 +38,107 @@ export function OverviewPage() {
     )
     .slice(0, 6);
 
+  const monitoringSlices: MonitoringSlice[] = [
+    {
+      key: "up_to_date",
+      label: "À jour",
+      description: "Aucune mise à jour en attente.",
+      count: 0,
+      color: "#216e54",
+    },
+    {
+      key: "pending_updates",
+      label: "MàJ en attente",
+      description: "Updates disponibles hors sécurité.",
+      count: 0,
+      color: "#d39a2c",
+    },
+    {
+      key: "security_updates",
+      label: "Sécurité",
+      description: "Correctifs sécurité à traiter.",
+      count: 0,
+      color: "#aa4359",
+    },
+    {
+      key: "watch",
+      label: "À surveiller",
+      description: "Dernier report ancien ou instable.",
+      count: 0,
+      color: "#446c9c",
+    },
+    {
+      key: "offline",
+      label: "Hors ligne",
+      description: "Machine non joignable ou état dégradé.",
+      count: 0,
+      color: "#5d6472",
+    },
+    {
+      key: "no_report",
+      label: "Sans report",
+      description: "Agent enrôlé sans snapshot exploitable.",
+      count: 0,
+      color: "#a3adb8",
+    },
+  ];
+
+  for (const server of servers) {
+    if (!server.latestSnapshot) {
+      monitoringSlices[5].count += 1;
+      continue;
+    }
+
+    if (server.latestJob?.status === "failed") {
+      monitoringSlices[4].count += 1;
+      continue;
+    }
+
+    if (server.connectivityStatus === "offline" || !server.latestSnapshot.reachable) {
+      monitoringSlices[4].count += 1;
+      continue;
+    }
+
+    if (server.connectivityStatus === "stale") {
+      monitoringSlices[3].count += 1;
+      continue;
+    }
+
+    if (server.latestSnapshot.securityCount > 0) {
+      monitoringSlices[2].count += 1;
+      continue;
+    }
+
+    if (server.latestSnapshot.upgradableCount > 0) {
+      monitoringSlices[1].count += 1;
+      continue;
+    }
+
+    monitoringSlices[0].count += 1;
+  }
+
+  const monitoredCount = monitoringSlices.reduce((total, slice) => total + slice.count, 0);
+  const activeMonitoringSlices = monitoringSlices.filter((slice) => slice.count > 0);
+  const donutStops: string[] = [];
+  let offset = 0;
+
+  for (const slice of monitoringSlices) {
+    if (monitoredCount === 0 || slice.count === 0) {
+      continue;
+    }
+
+    const angle = (slice.count / monitoredCount) * 360;
+    donutStops.push(`${slice.color} ${offset}deg ${offset + angle}deg`);
+    offset += angle;
+  }
+
+  const donutStyle = {
+    background:
+      monitoredCount > 0
+        ? `conic-gradient(${donutStops.join(", ")})`
+        : "conic-gradient(#e2e8f0 0deg 360deg)",
+  };
+
   return (
     <div className="page-column">
       <section className="page-header panel">
@@ -37,7 +146,7 @@ export function OverviewPage() {
           <p className="section-kicker">Accueil</p>
           <h2>Vue générale du parc</h2>
           <p className="page-copy">
-            Résumé des serveurs, des updates à traiter et des derniers retours agents.
+            Résumé des serveurs, des mises à jour à traiter et des derniers retours agents.
           </p>
         </div>
         <div className="page-header-side">
@@ -109,12 +218,54 @@ export function OverviewPage() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="section-kicker">Répartition</p>
+              <p className="section-kicker">Monitoring</p>
               <h3>État du parc</h3>
             </div>
           </div>
 
-          <div className="summary-grid">
+          {monitoredCount === 0 ? (
+            <div className="empty-state">Aucun serveur enregistré pour le moment.</div>
+          ) : (
+            <div className="monitoring-layout">
+              <div className="monitoring-donut-block">
+                <div className="monitoring-donut-shell">
+                  <div className="monitoring-donut" style={donutStyle} aria-hidden="true" />
+                  <div className="monitoring-donut-core">
+                    <span>Parc monitoré</span>
+                    <strong>{monitoredCount}</strong>
+                    <small>serveur{monitoredCount > 1 ? "s" : ""}</small>
+                  </div>
+                </div>
+              </div>
+
+              <div className="monitoring-legend">
+                {monitoringSlices.map((slice) => {
+                  const percentage =
+                    monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
+
+                  return (
+                    <article key={slice.key} className="monitoring-item">
+                      <span
+                        className="monitoring-swatch"
+                        style={{ backgroundColor: slice.color }}
+                        aria-hidden="true"
+                      />
+                      <div className="monitoring-copy">
+                        <strong>{slice.label}</strong>
+                        <p>{slice.description}</p>
+                      </div>
+                      <div className="monitoring-value">
+                        <strong>{slice.count}</strong>
+                        <small>{percentage}%</small>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="summary-grid monitoring-summary-grid">
             <article className="mini-summary">
               <span>Joignables</span>
               <strong>{summaryQuery.data?.reachableCount ?? 0}</strong>
@@ -138,6 +289,14 @@ export function OverviewPage() {
             <article className="mini-summary">
               <span>Alertes infra</span>
               <strong>{staleOrOfflineCount}</strong>
+            </article>
+            <article className="mini-summary">
+              <span>Segments actifs</span>
+              <strong>{activeMonitoringSlices.length}</strong>
+            </article>
+            <article className="mini-summary">
+              <span>Dernier report</span>
+              <strong>{formatDate(summaryQuery.data?.lastGlobalCheckAt)}</strong>
             </article>
           </div>
         </section>
