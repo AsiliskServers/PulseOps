@@ -895,8 +895,8 @@ pre {
   position: fixed;
   inset: 0;
   z-index: 60;
-  overflow: auto;
-  padding: 26px 26px 96px;
+  overflow: hidden;
+  padding: 18px 18px 88px;
   background:
     radial-gradient(circle at top center, rgba(33, 110, 84, 0.12), transparent 26%),
     linear-gradient(180deg, #f4f8fb 0%, #eef3f7 100%);
@@ -904,32 +904,137 @@ pre {
 
 .tv-shell {
   display: grid;
-  gap: 18px;
-  min-height: 100%;
+  gap: 12px;
+  height: calc(100vh - 106px);
+  max-height: calc(100vh - 106px);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+
+.tv-shell .panel {
+  padding: 16px;
+}
+
+.tv-shell .panel-header {
+  margin-bottom: 10px;
+}
+
+.tv-shell .page-copy {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 60ch;
+}
+
+.tv-shell .section-kicker {
+  font-size: 10px;
+}
+
+.tv-shell .server-badge,
+.tv-shell .status-pill {
+  padding: 5px 8px;
+  font-size: 10px;
+}
+
+.tv-shell .monitoring-constellation {
+  grid-template-columns: 220px 280px 220px;
+  min-height: 336px;
+  column-gap: 42px;
+  row-gap: 18px;
+  margin-bottom: 10px;
+}
+
+.tv-shell .monitoring-hub {
+  min-height: 292px;
+  padding: 18px 16px;
+  gap: 14px;
+}
+
+.tv-shell .monitoring-hub-copy strong {
+  font-size: 34px;
+}
+
+.tv-shell .monitoring-hub-stat {
+  padding: 10px 12px;
+}
+
+.tv-shell .monitoring-hub-stat strong {
+  font-size: 16px;
+  margin-top: 5px;
+}
+
+.tv-shell .monitoring-server-beacon {
+  width: 72px;
+  height: 72px;
+}
+
+.tv-shell .monitoring-server-stack {
+  width: 132px;
+}
+
+.tv-shell .monitoring-server-unit {
+  height: 38px;
+}
+
+.tv-shell .monitoring-callout {
+  width: min(220px, 100%);
+  padding: 11px 12px;
+  gap: 10px;
+}
+
+.tv-shell .monitoring-copy-top strong {
+  font-size: 12px;
+}
+
+.tv-shell .monitoring-copy p {
+  font-size: 11px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tv-shell .monitoring-value strong {
+  font-size: 16px;
+}
+
+.tv-shell .monitoring-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tv-shell .mini-summary {
+  padding: 10px 12px;
+}
+
+.tv-shell .mini-summary strong {
+  margin-top: 6px;
+  font-size: 16px;
 }
 
 .tv-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
 }
 
 .tv-hero-copy {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tv-hero-copy h2 {
   margin: 0;
-  font-size: clamp(30px, 3.2vw, 44px);
+  font-size: clamp(24px, 2.8vw, 34px);
   line-height: 1.02;
   letter-spacing: -0.04em;
 }
 
 .tv-clock-card {
-  min-width: 290px;
-  padding: 18px 20px;
+  min-width: 250px;
+  padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, #fbfcfd 0%, var(--surface-soft) 100%);
@@ -948,8 +1053,8 @@ pre {
 
 .tv-clock-card strong {
   display: block;
-  margin-top: 8px;
-  font-size: 22px;
+  margin-top: 6px;
+  font-size: 18px;
   line-height: 1.25;
   letter-spacing: -0.02em;
 }
@@ -957,9 +1062,9 @@ pre {
 .tv-banner {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
+  gap: 14px;
   align-items: center;
-  padding: 18px 20px;
+  padding: 14px 16px;
   border-radius: 20px;
   border: 1px solid var(--line);
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
@@ -967,15 +1072,17 @@ pre {
 
 .tv-banner strong {
   display: block;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.08;
   letter-spacing: -0.03em;
 }
 
 .tv-banner p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--muted);
   max-width: 74ch;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .tv-banner-ok {
@@ -1001,13 +1108,13 @@ pre {
 .tv-banner-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(140px, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .tv-banner-metrics div,
 .tv-metric-card,
 .tv-server-metrics div {
-  padding: 14px 16px;
+  padding: 10px 12px;
   border-radius: 16px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.74);
@@ -1017,8 +1124,8 @@ pre {
 .tv-metric-card strong,
 .tv-server-metrics strong {
   display: block;
-  margin-top: 8px;
-  font-size: 24px;
+  margin-top: 6px;
+  font-size: 20px;
   line-height: 1;
   letter-spacing: -0.03em;
   color: #0f2740;
@@ -1027,7 +1134,7 @@ pre {
 .tv-metrics-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .tv-metric-card {
@@ -1038,29 +1145,33 @@ pre {
 .tv-main-grid {
   display: grid;
   grid-template-columns: minmax(400px, 0.98fr) minmax(0, 1.12fr);
-  gap: 18px;
+  gap: 12px;
+  min-height: 0;
 }
 
 .tv-stack {
   display: grid;
-  gap: 18px;
+  gap: 12px;
+  min-height: 0;
 }
 
 .tv-panel {
   min-height: 0;
+  display: grid;
+  align-content: start;
 }
 
 .tv-priority-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .tv-priority-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
+  gap: 12px;
+  padding: 12px 14px;
   border-radius: 18px;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, #fbfcfd 0%, var(--surface-soft) 100%);
@@ -1070,18 +1181,30 @@ pre {
   min-width: 0;
 }
 
+.tv-server-name {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .tv-priority-main strong,
 .tv-server-name strong {
   display: block;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.15;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tv-priority-main p,
 .tv-server-name p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tv-priority-side {
@@ -1094,13 +1217,20 @@ pre {
 
 .tv-server-wall {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  align-content: start;
+  grid-auto-rows: 1fr;
 }
 
 .tv-server-card {
   min-width: 0;
-  padding: 16px;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  align-content: start;
+  gap: 10px;
+  padding: 12px 14px;
   border-radius: 18px;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, #fbfcfd 0%, var(--surface-soft) 100%);
@@ -1121,7 +1251,8 @@ pre {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 14px;
+  gap: 12px;
+  min-height: 52px;
 }
 
 .tv-server-badges {
@@ -1135,10 +1266,10 @@ pre {
 .tv-server-live {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 7px;
+  padding: 7px 9px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1184,21 +1315,21 @@ pre {
 .tv-server-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 0;
 }
 
 .tv-server-metrics strong {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .tv-server-meta {
-  margin-top: 12px;
+  margin-top: 0;
   display: flex;
   justify-content: space-between;
   gap: 12px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .detail-fields {
@@ -1874,6 +2005,15 @@ pre {
     grid-template-columns: 1fr;
   }
 
+  .tv-overlay {
+    overflow: auto;
+  }
+
+  .tv-shell {
+    height: auto;
+    max-height: none;
+  }
+
   .tv-banner-metrics,
   .tv-metrics-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1968,6 +2108,11 @@ pre {
 
   .tv-overlay {
     padding: 18px 18px 90px;
+  }
+
+  .tv-shell {
+    height: auto;
+    max-height: none;
   }
 
   .tv-hero,
