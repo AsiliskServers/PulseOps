@@ -146,10 +146,10 @@ export function OverviewPage() {
   }
 
   const donutStyle = {
-    background:
+    backgroundImage:
       monitoredCount > 0
-        ? `conic-gradient(${donutStops.join(", ")})`
-        : "conic-gradient(#e2e8f0 0deg 360deg)",
+        ? `radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.35), transparent 34%), conic-gradient(${donutStops.join(", ")})`
+        : "radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.35), transparent 34%), conic-gradient(#dfe6ee 0deg 360deg)",
   };
 
   return (
