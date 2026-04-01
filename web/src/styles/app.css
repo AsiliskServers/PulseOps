@@ -416,8 +416,9 @@ pre {
 }
 
 .page-column {
-  max-width: 1440px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   display: grid;
   gap: 20px;
 }
@@ -1304,6 +1305,20 @@ pre {
 
 .checkbox-row input {
   width: auto;
+}
+
+@media (min-width: 1440px) {
+  .app-main {
+    padding: 32px 36px 40px;
+  }
+
+  .overview-grid {
+    grid-template-columns: minmax(620px, 1.15fr) minmax(540px, 1fr);
+  }
+
+  .detail-layout {
+    grid-template-columns: minmax(0, 1.4fr) 380px;
+  }
 }
 
 @media (max-width: 1280px) {
