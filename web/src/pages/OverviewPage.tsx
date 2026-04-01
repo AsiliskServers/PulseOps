@@ -9,6 +9,13 @@ type MonitoringSlice = {
   description: string;
   count: number;
   color: string;
+  position:
+    | "top-left"
+    | "left"
+    | "bottom-left"
+    | "top-right"
+    | "right"
+    | "bottom-right";
 };
 
 export function OverviewPage() {
@@ -40,25 +47,12 @@ export function OverviewPage() {
 
   const monitoringSlices: MonitoringSlice[] = [
     {
-      key: "up_to_date",
-      label: "À jour",
-      description: "Aucune mise à jour en attente.",
-      count: 0,
-      color: "#216e54",
-    },
-    {
-      key: "pending_updates",
-      label: "MàJ en attente",
-      description: "Updates disponibles hors sécurité.",
-      count: 0,
-      color: "#d39a2c",
-    },
-    {
       key: "security_updates",
       label: "Sécurité",
       description: "Correctifs sécurité à traiter.",
       count: 0,
       color: "#aa4359",
+      position: "top-left",
     },
     {
       key: "watch",
@@ -66,13 +60,7 @@ export function OverviewPage() {
       description: "Dernier report ancien ou instable.",
       count: 0,
       color: "#446c9c",
-    },
-    {
-      key: "offline",
-      label: "Hors ligne",
-      description: "Machine non joignable ou état dégradé.",
-      count: 0,
-      color: "#5d6472",
+      position: "left",
     },
     {
       key: "no_report",
@@ -80,41 +68,66 @@ export function OverviewPage() {
       description: "Agent enrôlé sans snapshot exploitable.",
       count: 0,
       color: "#a3adb8",
+      position: "bottom-left",
+    },
+    {
+      key: "pending_updates",
+      label: "MàJ en attente",
+      description: "Updates disponibles hors sécurité.",
+      count: 0,
+      color: "#d39a2c",
+      position: "top-right",
+    },
+    {
+      key: "up_to_date",
+      label: "À jour",
+      description: "Aucune mise à jour en attente.",
+      count: 0,
+      color: "#216e54",
+      position: "right",
+    },
+    {
+      key: "offline",
+      label: "Hors ligne",
+      description: "Machine non joignable ou état dégradé.",
+      count: 0,
+      color: "#5d6472",
+      position: "bottom-right",
     },
   ];
 
   for (const server of servers) {
     if (!server.latestSnapshot) {
-      monitoringSlices[5].count += 1;
-      continue;
-    }
-
-    if (server.latestJob?.status === "failed") {
-      monitoringSlices[4].count += 1;
-      continue;
-    }
-
-    if (server.connectivityStatus === "offline" || !server.latestSnapshot.reachable) {
-      monitoringSlices[4].count += 1;
-      continue;
-    }
-
-    if (server.connectivityStatus === "stale") {
-      monitoringSlices[3].count += 1;
-      continue;
-    }
-
-    if (server.latestSnapshot.securityCount > 0) {
       monitoringSlices[2].count += 1;
       continue;
     }
 
-    if (server.latestSnapshot.upgradableCount > 0) {
+    if (server.latestJob?.status === "failed") {
+      monitoringSlices[5].count += 1;
+      continue;
+    }
+
+    if (server.connectivityStatus === "offline" || !server.latestSnapshot.reachable) {
+      monitoringSlices[5].count += 1;
+      continue;
+    }
+
+    if (server.connectivityStatus === "stale") {
       monitoringSlices[1].count += 1;
       continue;
     }
 
-    monitoringSlices[0].count += 1;
+    if (server.latestSnapshot.securityCount > 0) {
+      monitoringSlices[0].count += 1;
+      continue;
+    }
+
+    if (server.latestSnapshot.upgradableCount > 0) {
+      monitoringSlices[3].count += 1;
+      continue;
+    }
+
+    monitoringSlices[4].count += 1;
   }
 
   const monitoredCount = monitoringSlices.reduce((total, slice) => total + slice.count, 0);
@@ -226,8 +239,22 @@ export function OverviewPage() {
           {monitoredCount === 0 ? (
             <div className="empty-state">Aucun serveur enregistré pour le moment.</div>
           ) : (
-            <div className="monitoring-layout">
-              <div className="monitoring-donut-block">
+            <div className="monitoring-constellation">
+              <svg
+                className="monitoring-lines"
+                viewBox="0 0 1000 560"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path d="M430 190 H326 V120 H238" />
+                <path d="M418 280 H196" />
+                <path d="M430 370 H326 V440 H238" />
+                <path d="M570 190 H674 V120 H762" />
+                <path d="M582 280 H804" />
+                <path d="M570 370 H674 V440 H762" />
+              </svg>
+
+              <div className="monitoring-center">
                 <div className="monitoring-donut-shell">
                   <div className="monitoring-donut" style={donutStyle} aria-hidden="true" />
                   <div className="monitoring-donut-core">
@@ -238,30 +265,36 @@ export function OverviewPage() {
                 </div>
               </div>
 
-              <div className="monitoring-legend">
-                {monitoringSlices.map((slice) => {
-                  const percentage =
-                    monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
+              {monitoringSlices.map((slice) => {
+                const percentage =
+                  monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
 
-                  return (
-                    <article key={slice.key} className="monitoring-item">
-                      <span
-                        className="monitoring-swatch"
-                        style={{ backgroundColor: slice.color }}
-                        aria-hidden="true"
-                      />
-                      <div className="monitoring-copy">
+                return (
+                  <article
+                    key={slice.key}
+                    className={`monitoring-callout ${slice.position} ${
+                      slice.count > 0 ? "has-value" : "is-empty"
+                    }`}
+                  >
+                    <span
+                      className="monitoring-swatch"
+                      style={{ backgroundColor: slice.color }}
+                      aria-hidden="true"
+                    />
+                    <div className="monitoring-copy">
+                      <div className="monitoring-copy-top">
                         <strong>{slice.label}</strong>
-                        <p>{slice.description}</p>
-                      </div>
-                      <div className="monitoring-value">
-                        <strong>{slice.count}</strong>
                         <small>{percentage}%</small>
                       </div>
-                    </article>
-                  );
-                })}
-              </div>
+                      <p>{slice.description}</p>
+                    </div>
+                    <div className="monitoring-value">
+                      <strong>{slice.count}</strong>
+                      <small>serveur{slice.count > 1 ? "s" : ""}</small>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
 
