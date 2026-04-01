@@ -559,25 +559,27 @@ pre {
 .monitoring-constellation {
   --monitoring-card-width: 214px;
   --monitoring-center-size: 206px;
-  --monitoring-column-gap: 34px;
-  --monitoring-link-bend: 18px;
+  --monitoring-column-gap: 48px;
+  --monitoring-link-bend: 28px;
+  --monitoring-link-overlap: 18px;
   display: grid;
   grid-template-columns:
     var(--monitoring-card-width)
     var(--monitoring-center-size)
     var(--monitoring-card-width);
-  grid-template-rows: repeat(3, minmax(88px, auto));
+  grid-template-rows: repeat(3, minmax(92px, auto));
   justify-content: center;
   align-items: center;
+  isolation: isolate;
   column-gap: var(--monitoring-column-gap);
-  row-gap: 18px;
+  row-gap: 24px;
   margin-bottom: 18px;
 }
 
 .monitoring-center {
   grid-column: 2;
   grid-row: 1 / span 3;
-  z-index: 1;
+  z-index: 2;
   justify-self: center;
   align-self: center;
 }
@@ -671,6 +673,7 @@ pre {
   border: 1px solid var(--line);
   background: linear-gradient(180deg, #fbfcfd 0%, var(--surface-soft) 100%);
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+  z-index: 1;
 }
 
 .monitoring-callout::before,
@@ -680,6 +683,7 @@ pre {
   pointer-events: none;
   border-color: rgba(135, 149, 165, 0.85);
   border-style: dashed;
+  z-index: -1;
 }
 
 .monitoring-callout.has-value {
@@ -724,8 +728,8 @@ pre {
 .monitoring-callout.left::before,
 .monitoring-callout.bottom-left::before {
   top: 50%;
-  right: calc(var(--monitoring-column-gap) * -1);
-  width: var(--monitoring-column-gap);
+  right: calc((var(--monitoring-column-gap) + var(--monitoring-link-overlap)) * -1);
+  width: calc(var(--monitoring-column-gap) + var(--monitoring-link-overlap));
   border-top-width: 1.5px;
   transform: translateY(-50%);
 }
@@ -734,15 +738,15 @@ pre {
 .monitoring-callout.right::before,
 .monitoring-callout.bottom-right::before {
   top: 50%;
-  left: calc(var(--monitoring-column-gap) * -1);
-  width: var(--monitoring-column-gap);
+  left: calc((var(--monitoring-column-gap) + var(--monitoring-link-overlap)) * -1);
+  width: calc(var(--monitoring-column-gap) + var(--monitoring-link-overlap));
   border-top-width: 1.5px;
   transform: translateY(-50%);
 }
 
 .monitoring-callout.top-left::after,
 .monitoring-callout.bottom-left::after {
-  right: calc(var(--monitoring-column-gap) * -1);
+  right: calc((var(--monitoring-column-gap) + var(--monitoring-link-overlap)) * -1);
   width: 0;
   height: var(--monitoring-link-bend);
   border-right-width: 1.5px;
@@ -750,7 +754,7 @@ pre {
 
 .monitoring-callout.top-right::after,
 .monitoring-callout.bottom-right::after {
-  left: calc(var(--monitoring-column-gap) * -1);
+  left: calc((var(--monitoring-column-gap) + var(--monitoring-link-overlap)) * -1);
   width: 0;
   height: var(--monitoring-link-bend);
   border-left-width: 1.5px;
