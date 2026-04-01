@@ -1107,17 +1107,14 @@ pre {
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
 }
 
-.tv-server-card.tone-live,
-.tv-server-card.tone-pending {
+.tv-server-card.wall-pending {
   border-color: rgba(154, 111, 38, 0.24);
+  background: linear-gradient(180deg, rgba(251, 242, 226, 0.98) 0%, rgba(255, 250, 242, 0.94) 100%);
 }
 
-.tv-server-card.tone-critical {
+.tv-server-card.wall-critical {
   border-color: rgba(170, 67, 89, 0.24);
-}
-
-.tv-server-card.tone-ok {
-  border-color: rgba(33, 110, 84, 0.2);
+  background: linear-gradient(180deg, rgba(249, 232, 236, 0.98) 0%, rgba(255, 248, 250, 0.94) 100%);
 }
 
 .tv-server-card-head {

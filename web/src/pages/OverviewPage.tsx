@@ -213,6 +213,18 @@ function resolveTvSignal(server: ServerSummary): TvSignal {
   return { label: "Stable", tone: "ok" };
 }
 
+function resolveTvWallAccent(stateLabel: string): "default" | "pending" | "critical" {
+  if (stateLabel === "MàJ en attente") {
+    return "pending";
+  }
+
+  if (stateLabel === "Sécurité") {
+    return "critical";
+  }
+
+  return "default";
+}
+
 function resolveTvBanner(summary: DashboardSummary | undefined): TvBanner {
   if (!summary || summary.serverCount === 0) {
     return {
@@ -697,9 +709,10 @@ export function OverviewPage() {
                 tvWallServers.map((server) => {
                   const state = resolveServerState(server);
                   const signal = resolveTvSignal(server);
+                  const wallAccent = resolveTvWallAccent(state.label);
 
                   return (
-                    <article key={server.id} className={`tv-server-card tone-${signal.tone}`}>
+                    <article key={server.id} className={`tv-server-card wall-${wallAccent}`}>
                       <div className="tv-server-card-head">
                         <div className="tv-server-name">
                           <strong>{server.name}</strong>
