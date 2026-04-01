@@ -23,6 +23,7 @@ type Summary struct {
 }
 
 var securityPattern = regexp.MustCompile(`/[^ ]*security[^ ]*\s`)
+var upgradableLinePattern = regexp.MustCompile(`^[^\s/]+/[^ ]+\s+.+\[[^]]+\]$`)
 
 func RunRefresh() (Summary, error) {
 	_, err := runCommand("apt-get", "update")
@@ -81,7 +82,13 @@ func RunUpgrade(allowUpgrade bool) (Summary, error) {
 
 func runCommand(command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+	cmd.Env = append(
+		os.Environ(),
+		"DEBIAN_FRONTEND=noninteractive",
+		"LC_ALL=C.UTF-8",
+		"LANG=C.UTF-8",
+		"LANGUAGE=C",
+	)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -118,7 +125,7 @@ func extractUpgradableLines(output string) []string {
 			continue
 		}
 
-		if !strings.Contains(trimmed, "[upgradable from:") {
+		if !upgradableLinePattern.MatchString(trimmed) {
 			continue
 		}
 

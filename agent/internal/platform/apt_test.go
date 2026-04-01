@@ -34,3 +34,18 @@ Tous les paquets sont a jour.`
 		t.Fatalf("expected 1 security package, got %d", securityCount)
 	}
 }
+
+func TestParseUpgradableListSupportsFrenchAptOutput(t *testing.T) {
+	output := `libpng16-16t64/stable-security 1.6.48-1+deb13u4 amd64 [pouvant être mis à jour depuis : 1.6.48-1+deb13u3]
+Notification : Il y a une version supplémentaire 1. Veuillez utiliser l'opérande « -a » pour la voir.`
+
+	upgradableCount, securityCount := parseUpgradableList(output)
+
+	if upgradableCount != 1 {
+		t.Fatalf("expected 1 upgradable package, got %d", upgradableCount)
+	}
+
+	if securityCount != 1 {
+		t.Fatalf("expected 1 security package, got %d", securityCount)
+	}
+}
