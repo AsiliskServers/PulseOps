@@ -9,7 +9,13 @@ type MonitoringSlice = {
   description: string;
   count: number;
   color: string;
-  column: "left" | "right";
+  position:
+    | "top-left"
+    | "left"
+    | "bottom-left"
+    | "top-right"
+    | "right"
+    | "bottom-right";
 };
 
 function serverUnitLabel(count: number) {
@@ -50,7 +56,7 @@ export function OverviewPage() {
       description: "Correctifs sécurité à traiter.",
       count: 0,
       color: "#aa4359",
-      column: "left",
+      position: "top-left",
     },
     {
       key: "watch",
@@ -58,7 +64,7 @@ export function OverviewPage() {
       description: "Dernier report ancien ou instable.",
       count: 0,
       color: "#446c9c",
-      column: "left",
+      position: "left",
     },
     {
       key: "no_report",
@@ -66,7 +72,7 @@ export function OverviewPage() {
       description: "Agent enrôlé sans snapshot exploitable.",
       count: 0,
       color: "#a3adb8",
-      column: "left",
+      position: "bottom-left",
     },
     {
       key: "pending_updates",
@@ -74,7 +80,7 @@ export function OverviewPage() {
       description: "Updates disponibles hors sécurité.",
       count: 0,
       color: "#d39a2c",
-      column: "right",
+      position: "top-right",
     },
     {
       key: "up_to_date",
@@ -82,7 +88,7 @@ export function OverviewPage() {
       description: "Aucune mise à jour en attente.",
       count: 0,
       color: "#216e54",
-      column: "right",
+      position: "right",
     },
     {
       key: "offline",
@@ -90,7 +96,7 @@ export function OverviewPage() {
       description: "Machine non joignable ou état dégradé.",
       count: 0,
       color: "#5d6472",
-      column: "right",
+      position: "bottom-right",
     },
   ];
 
@@ -130,8 +136,6 @@ export function OverviewPage() {
 
   const monitoredCount = monitoringSlices.reduce((total, slice) => total + slice.count, 0);
   const activeMonitoringSlices = monitoringSlices.filter((slice) => slice.count > 0);
-  const leftMonitoringSlices = monitoringSlices.filter((slice) => slice.column === "left");
-  const rightMonitoringSlices = monitoringSlices.filter((slice) => slice.column === "right");
 
   function renderMonitoringCallout(slice: MonitoringSlice) {
     const percentage = monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
@@ -139,7 +143,9 @@ export function OverviewPage() {
     return (
       <article
         key={slice.key}
-        className={`monitoring-callout ${slice.count > 0 ? "has-value" : "is-empty"}`}
+        className={`monitoring-callout ${slice.position} ${
+          slice.count > 0 ? "has-value" : "is-empty"
+        }`}
       >
         <span
           className="monitoring-swatch"
@@ -249,6 +255,93 @@ export function OverviewPage() {
             <div className="empty-state">Aucun serveur enregistré pour le moment.</div>
           ) : (
             <div className="monitoring-constellation">
+              <svg
+                className="monitoring-connector-layer"
+                viewBox="0 0 920 430"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <defs>
+                  <filter id="monitoringGlow">
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                <path
+                  id="monitoringPathTopLeft"
+                  className="monitoring-connector-path"
+                  d="M 236 54 H 344 V 120 H 406"
+                />
+                <path
+                  id="monitoringPathLeft"
+                  className="monitoring-connector-path"
+                  d="M 236 214 H 406"
+                />
+                <path
+                  id="monitoringPathBottomLeft"
+                  className="monitoring-connector-path"
+                  d="M 236 374 H 344 V 308 H 406"
+                />
+                <path
+                  id="monitoringPathTopRight"
+                  className="monitoring-connector-path"
+                  d="M 684 54 H 576 V 120 H 514"
+                />
+                <path
+                  id="monitoringPathRight"
+                  className="monitoring-connector-path"
+                  d="M 684 214 H 514"
+                />
+                <path
+                  id="monitoringPathBottomRight"
+                  className="monitoring-connector-path"
+                  d="M 684 374 H 576 V 308 H 514"
+                />
+                <path
+                  className="monitoring-connector-path monitoring-connector-path-core"
+                  d="M 406 214 H 442"
+                />
+                <path
+                  className="monitoring-connector-path monitoring-connector-path-core"
+                  d="M 478 214 H 514"
+                />
+
+                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
+                  <animateMotion dur="3.1s" repeatCount="indefinite" rotate="auto">
+                    <mpath href="#monitoringPathTopLeft" />
+                  </animateMotion>
+                </circle>
+                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
+                  <animateMotion dur="3.35s" begin="0.35s" repeatCount="indefinite" rotate="auto">
+                    <mpath href="#monitoringPathLeft" />
+                  </animateMotion>
+                </circle>
+                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
+                  <animateMotion dur="3.15s" begin="0.75s" repeatCount="indefinite" rotate="auto">
+                    <mpath href="#monitoringPathBottomLeft" />
+                  </animateMotion>
+                </circle>
+                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
+                  <animateMotion dur="3.05s" begin="0.2s" repeatCount="indefinite" rotate="auto">
+                    <mpath href="#monitoringPathTopRight" />
+                  </animateMotion>
+                </circle>
+                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
+                  <animateMotion dur="3.3s" begin="0.55s" repeatCount="indefinite" rotate="auto">
+                    <mpath href="#monitoringPathRight" />
+                  </animateMotion>
+                </circle>
+                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
+                  <animateMotion dur="3.2s" begin="0.9s" repeatCount="indefinite" rotate="auto">
+                    <mpath href="#monitoringPathBottomRight" />
+                  </animateMotion>
+                </circle>
+              </svg>
+
               <div className="monitoring-center">
                 <div className="monitoring-hub">
                   <div className="monitoring-hub-copy">
@@ -258,6 +351,7 @@ export function OverviewPage() {
                   </div>
 
                   <div className="monitoring-server-visual" aria-hidden="true">
+                    <div className="monitoring-server-beacon" />
                     <div className="monitoring-server-stack">
                       <div className="monitoring-server-unit">
                         <span className="monitoring-server-slot" />
@@ -284,10 +378,6 @@ export function OverviewPage() {
                         </div>
                       </div>
                     </div>
-
-                    <div className="monitoring-signal-track">
-                      <span className="monitoring-signal-orb" />
-                    </div>
                   </div>
 
                   <div className="monitoring-hub-meta">
@@ -303,13 +393,7 @@ export function OverviewPage() {
                 </div>
               </div>
 
-              <div className="monitoring-column monitoring-column-left">
-                {leftMonitoringSlices.map(renderMonitoringCallout)}
-              </div>
-
-              <div className="monitoring-column monitoring-column-right">
-                {rightMonitoringSlices.map(renderMonitoringCallout)}
-              </div>
+              {monitoringSlices.map(renderMonitoringCallout)}
             </div>
           )}
 
