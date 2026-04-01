@@ -390,8 +390,10 @@ export function ServerDetailPage() {
 
               {liveJob ? (
                 <div className="live-indicator">
-                  <span className="live-dot" />
-                  <span>En direct</span>
+                  <span className="live-indicator-label">
+                    <span className="live-dot" />
+                    <span>En direct</span>
+                  </span>
                 </div>
               ) : null}
             </div>

@@ -919,9 +919,11 @@ pre {
   text-transform: uppercase;
 }
 
-.live-indicator span:last-child {
+.live-indicator-label {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
+  line-height: 1;
 }
 
 .live-dot {
