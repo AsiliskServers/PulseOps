@@ -1144,9 +1144,10 @@ pre {
 
 .tv-main-grid {
   display: grid;
-  grid-template-columns: minmax(400px, 0.98fr) minmax(0, 1.12fr);
+  grid-template-columns: minmax(340px, 0.84fr) minmax(0, 1.16fr);
   gap: 12px;
   min-height: 0;
+  align-items: start;
 }
 
 .tv-stack {
@@ -1217,7 +1218,7 @@ pre {
 
 .tv-server-wall {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   align-content: start;
   grid-auto-rows: 1fr;
@@ -1229,9 +1230,9 @@ pre {
   display: grid;
   grid-template-rows: auto auto auto auto;
   align-content: start;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 18px;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, #fbfcfd 0%, var(--surface-soft) 100%);
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
@@ -1251,8 +1252,8 @@ pre {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
-  min-height: 52px;
+  gap: 10px;
+  min-height: 46px;
 }
 
 .tv-server-badges {
@@ -1260,14 +1261,14 @@ pre {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .tv-server-live {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 9px;
+  padding: 6px 8px;
   border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
@@ -1319,17 +1320,28 @@ pre {
   margin-top: 0;
 }
 
+.tv-server-metrics div {
+  padding: 8px 10px;
+}
+
 .tv-server-metrics strong {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .tv-server-meta {
   margin-top: 0;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   color: var(--muted);
   font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tv-server-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail-fields {
@@ -2019,6 +2031,10 @@ pre {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .tv-server-wall {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .monitoring-callout,
   .monitoring-hub {
     width: 100%;
@@ -2050,6 +2066,16 @@ pre {
     border-right: 0;
     border-bottom: 1px solid var(--line);
     grid-template-rows: auto auto auto auto;
+  }
+
+  .tv-server-wall {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .tv-server-wall {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

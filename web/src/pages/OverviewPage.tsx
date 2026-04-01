@@ -352,6 +352,7 @@ export function OverviewPage() {
         left.name.localeCompare(right.name, "fr")
     )
     .slice(0, 6);
+  const livePriorityServers = highlightedServers.filter((server) => resolveTvSignal(server).tone !== "ok");
   const tvWallServers = [...servers].sort(
     (left, right) =>
       getServerPriorityScore(right) - getServerPriorityScore(left) ||
@@ -667,10 +668,10 @@ export function OverviewPage() {
               </div>
 
               <div className="tv-priority-list">
-                {highlightedServers.length === 0 ? (
+                {livePriorityServers.length === 0 ? (
                   <div className="empty-state">Aucune alerte en direct.</div>
                 ) : (
-                  highlightedServers.map((server) => {
+                  livePriorityServers.map((server) => {
                     const state = resolveServerState(server);
                     const signal = resolveTvSignal(server);
                     return (
