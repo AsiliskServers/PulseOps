@@ -104,10 +104,6 @@ export async function registerAgentRoutes(
     try {
       const { body, server } = await authenticateAgent(request.body, env);
 
-      if (!isRecord(body)) {
-        return reply.status(400).send({ message: "Invalid request body" });
-      }
-
       const checkedAt = normalizeDate(readRequiredString(body, "checkedAt", "checkedAt")) ?? new Date();
       const reachable = Boolean(body.reachable);
       const upgradableCount = Number(body.upgradableCount ?? 0);
@@ -227,10 +223,6 @@ export async function registerAgentRoutes(
   app.post("/jobs/:id/result", async (request, reply) => {
     try {
       const { body, server } = await authenticateAgent(request.body, env);
-
-      if (!isRecord(body)) {
-        return reply.status(400).send({ message: "Invalid request body" });
-      }
 
       const jobId = String((request.params as { id: string }).id);
       const job = await prisma.job.findFirst({

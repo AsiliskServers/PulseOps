@@ -87,6 +87,20 @@ export function ServerDetailPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
 
+  async function refreshServerData(options: { includeDetail?: boolean } = {}) {
+    const includeDetail = options.includeDetail ?? true;
+    const invalidations = [
+      queryClient.invalidateQueries({ queryKey: ["servers"] }),
+      queryClient.invalidateQueries({ queryKey: ["summary"] }),
+    ];
+
+    if (includeDetail && serverId) {
+      invalidations.unshift(queryClient.invalidateQueries({ queryKey: ["server", serverId] }));
+    }
+
+    await Promise.all(invalidations);
+  }
+
   const detailQuery = useQuery({
     queryKey: ["server", serverId],
     queryFn: () => getServer(serverId!),
@@ -111,54 +125,35 @@ export function ServerDetailPage() {
     mutationFn: (payload: ServerPayload) => updateServer(serverId!, payload),
     onSuccess: async () => {
       setModalOpen(false);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
-      ]);
+      await refreshServerData();
     },
   });
 
   const refreshMutation = useMutation({
     mutationFn: () => triggerRefresh(serverId!),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
-      ]);
+      await refreshServerData();
     },
   });
 
   const upgradeMutation = useMutation({
     mutationFn: () => triggerUpgrade(serverId!),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
-      ]);
+      await refreshServerData();
     },
   });
 
   const agentUpdateMutation = useMutation({
     mutationFn: () => triggerAgentUpdate(serverId!),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
-      ]);
+      await refreshServerData();
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteServer(serverId!),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
-      ]);
+      await refreshServerData({ includeDetail: false });
       navigate("/servers", { replace: true });
     },
   });
@@ -166,11 +161,7 @@ export function ServerDetailPage() {
   const clearHistoryMutation = useMutation({
     mutationFn: () => clearServerHistory(serverId!),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
-      ]);
+      await refreshServerData();
     },
   });
 
@@ -188,11 +179,7 @@ export function ServerDetailPage() {
       });
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["server", serverId] }),
-        queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
-      ]);
+      await refreshServerData();
     },
   });
 

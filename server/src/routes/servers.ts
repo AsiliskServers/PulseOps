@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import { pendingJobStatuses } from "../lib/jobs.js";
 import { prisma } from "../lib/prisma.js";
 import { requireSessionUser } from "../lib/session.js";
@@ -94,6 +94,33 @@ export async function registerServerRoutes(
     });
   }
 
+  async function findServer(serverId: string) {
+    return prisma.server.findUnique({
+      where: {
+        id: serverId,
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
+
+  async function queueServerJobResponse(
+    reply: FastifyReply,
+    serverId: string,
+    triggeredByUserId: string,
+    type: JobType
+  ) {
+    const server = await findServer(serverId);
+
+    if (!server) {
+      return reply.status(404).send({ message: "Server not found" });
+    }
+
+    const job = await queueJob(server.id, triggeredByUserId, type);
+    return reply.status(202).send({ job: serializeJob(job) });
+  }
+
   app.get("/", async (request, reply) => {
     const user = await requireSessionUser(request, reply);
 
@@ -176,18 +203,15 @@ export async function registerServerRoutes(
 
     try {
       const payload = parseBatchJobPayload(request.body);
-      const servers = await prisma.server.findMany({
+      const matchingServerCount = await prisma.server.count({
         where: {
           id: {
             in: payload.serverIds,
           },
         },
-        select: {
-          id: true,
-        },
       });
 
-      if (servers.length !== payload.serverIds.length) {
+      if (matchingServerCount !== payload.serverIds.length) {
         return reply.status(404).send({ message: "One or more servers were not found" });
       }
 
@@ -297,23 +321,20 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const server = await prisma.server.findUnique({
-      where: {
-        id: serverId,
-      },
-    });
 
-    if (!server) {
-      return reply.status(404).send({ message: "Server not found" });
+    try {
+      await prisma.server.delete({
+        where: {
+          id: serverId,
+        },
+      });
+
+      return reply.status(204).send();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete server";
+      const statusCode = message === "Record to delete does not exist." ? 404 : 400;
+      return reply.status(statusCode).send({ message: statusCode === 404 ? "Server not found" : message });
     }
-
-    await prisma.server.delete({
-      where: {
-        id: serverId,
-      },
-    });
-
-    return reply.status(204).send();
   });
 
   app.post("/:id/jobs", async (request, reply) => {
@@ -324,15 +345,6 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const server = await prisma.server.findUnique({
-      where: {
-        id: serverId,
-      },
-    });
-
-    if (!server) {
-      return reply.status(404).send({ message: "Server not found" });
-    }
 
     try {
       if (!isRecord(request.body)) {
@@ -340,11 +352,7 @@ export async function registerServerRoutes(
       }
 
       const type = normalizeJobType(readRequiredString(request.body, "type", "type"));
-      const job = await queueJob(serverId, user.id, type);
-
-      return reply.status(202).send({
-        job: serializeJob(job),
-      });
+      return queueServerJobResponse(reply, serverId, user.id, type);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to queue job";
       return reply.status(400).send({ message });
@@ -359,14 +367,7 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const server = await prisma.server.findUnique({ where: { id: serverId } });
-
-    if (!server) {
-      return reply.status(404).send({ message: "Server not found" });
-    }
-
-    const job = await queueJob(serverId, user.id, "refresh");
-    return reply.status(202).send({ job: serializeJob(job) });
+    return queueServerJobResponse(reply, serverId, user.id, "refresh");
   });
 
   app.post("/:id/upgrade", async (request, reply) => {
@@ -377,14 +378,7 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const server = await prisma.server.findUnique({ where: { id: serverId } });
-
-    if (!server) {
-      return reply.status(404).send({ message: "Server not found" });
-    }
-
-    const job = await queueJob(serverId, user.id, "upgrade");
-    return reply.status(202).send({ job: serializeJob(job) });
+    return queueServerJobResponse(reply, serverId, user.id, "upgrade");
   });
 
   app.post("/:id/agent-update", async (request, reply) => {
@@ -395,14 +389,7 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const server = await prisma.server.findUnique({ where: { id: serverId } });
-
-    if (!server) {
-      return reply.status(404).send({ message: "Server not found" });
-    }
-
-    const job = await queueJob(serverId, user.id, "agent_update");
-    return reply.status(202).send({ job: serializeJob(job) });
+    return queueServerJobResponse(reply, serverId, user.id, "agent_update");
   });
 
   app.delete("/:id/history", async (request, reply) => {
@@ -463,11 +450,7 @@ export async function registerServerRoutes(
     }
 
     const serverId = String((request.params as { id: string }).id);
-    const server = await prisma.server.findUnique({
-      where: {
-        id: serverId,
-      },
-    });
+    const server = await findServer(serverId);
 
     if (!server) {
       return reply.status(404).send({ message: "Server not found" });
@@ -484,9 +467,7 @@ export async function registerServerRoutes(
     });
 
     return reply.send({
-      jobs: jobs
-        .map((job) => serializeJob(job))
-        .filter((job): job is NonNullable<typeof job> => job !== null),
+      jobs: jobs.map((job) => serializeJob(job)),
     });
   });
 }

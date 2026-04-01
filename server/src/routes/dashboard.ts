@@ -33,7 +33,6 @@ export async function registerDashboardRoutes(
       }),
     ]);
 
-    const latestSnapshots = servers.flatMap((server) => server.snapshots.slice(0, 1));
     let reachableCount = 0;
     let upToDateCount = 0;
     let pendingUpdateCount = 0;
@@ -46,6 +45,7 @@ export async function registerDashboardRoutes(
 
     for (const server of servers) {
       const status = deriveConnectivityStatus(server.lastSeenAt, env);
+      const snapshot = server.snapshots[0];
 
       if (status === "online") {
         onlineCount++;
@@ -54,9 +54,11 @@ export async function registerDashboardRoutes(
       } else {
         offlineCount++;
       }
-    }
 
-    for (const snapshot of latestSnapshots) {
+      if (!snapshot) {
+        continue;
+      }
+
       if (snapshot.reachable) {
         reachableCount++;
       }

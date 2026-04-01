@@ -7,7 +7,6 @@ import {
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
-import type { ServerSummary } from "../types";
 
 type BatchAction = "refresh" | "upgrade" | "agent_update";
 type SortField = "name" | "serverState" | "agentState" | "environment" | "lastSeenAt";
@@ -290,7 +289,7 @@ export function ServersPage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Nom, hostname, environnement…"
+              placeholder="Nom, hostname, environnement..."
             />
           </label>
         </div>

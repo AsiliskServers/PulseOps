@@ -54,6 +54,10 @@ type SerializeServerOptions = {
   pendingJobsCount?: number;
 };
 
+function getPendingJobsCount(jobs: readonly JobRecord[], explicitCount?: number): number {
+  return explicitCount ?? jobs.filter((job) => isPendingJobStatus(job.status)).length;
+}
+
 export function serializeSnapshot(snapshot: SnapshotRecord | null | undefined) {
   if (!snapshot) {
     return null;
@@ -71,6 +75,19 @@ export function serializeSnapshot(snapshot: SnapshotRecord | null | undefined) {
   };
 }
 
+export function serializeJob(job: JobLike): {
+  id: string;
+  type: string;
+  status: string;
+  claimedAt: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  outputPreview: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  triggeredByUserId: string;
+};
+export function serializeJob(job: null | undefined): null;
 export function serializeJob(job: JobLike | null | undefined) {
   if (!job) {
     return null;
@@ -95,10 +112,9 @@ export function serializeServer(
   env: ServerEnv,
   options: SerializeServerOptions = {}
 ) {
-  const jobs = "jobs" in server ? server.jobs : [];
+  const jobs = server.jobs;
   const latestAgentVersion = options.latestAgentVersion ?? null;
-  const pendingJobsCount =
-    options.pendingJobsCount ?? jobs.filter((job) => isPendingJobStatus(job.status)).length;
+  const pendingJobsCount = getPendingJobsCount(jobs, options.pendingJobsCount);
 
   return {
     id: server.id,
@@ -120,8 +136,7 @@ export function serializeServer(
     updatedAt: server.updatedAt.toISOString(),
     latestSnapshot: serializeSnapshot(server.snapshots[0]),
     latestJob: serializeJob(jobs[0]),
-    pendingJobsCount:
-      pendingJobsCount ?? jobs.filter((job) => isPendingJobStatus(job.status)).length,
+    pendingJobsCount,
   };
 }
 
@@ -136,13 +151,9 @@ export function serializeServerDetail(
       env,
       {
         ...options,
-        pendingJobsCount:
-          options.pendingJobsCount ??
-          server.jobs.filter((job) => isPendingJobStatus(job.status)).length,
+        pendingJobsCount: getPendingJobsCount(server.jobs, options.pendingJobsCount),
       }
     ),
-    recentJobs: server.jobs
-      .map((job) => serializeJob(job))
-      .filter((job): job is NonNullable<typeof job> => job !== null),
+    recentJobs: server.jobs.map((job) => serializeJob(job)),
   };
 }

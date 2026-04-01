@@ -240,20 +240,6 @@ export function OverviewPage() {
             <div className="empty-state">Aucun serveur enregistré pour le moment.</div>
           ) : (
             <div className="monitoring-constellation">
-              <svg
-                className="monitoring-lines"
-                viewBox="0 0 1000 560"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <path d="M430 190 H326 V120 H238" />
-                <path d="M418 280 H196" />
-                <path d="M430 370 H326 V440 H238" />
-                <path d="M570 190 H674 V120 H762" />
-                <path d="M582 280 H804" />
-                <path d="M570 370 H674 V440 H762" />
-              </svg>
-
               <div className="monitoring-center">
                 <div className="monitoring-donut-shell">
                   <div className="monitoring-donut" style={donutStyle} aria-hidden="true" />

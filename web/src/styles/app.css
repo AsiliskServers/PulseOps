@@ -562,24 +562,6 @@ pre {
   margin-bottom: 18px;
 }
 
-.monitoring-lines {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.monitoring-lines path {
-  fill: none;
-  stroke: rgba(135, 149, 165, 0.8);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 4 6;
-}
-
 .monitoring-center {
   position: absolute;
   top: 50%;
@@ -664,6 +646,15 @@ pre {
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
 }
 
+.monitoring-callout::before,
+.monitoring-callout::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-color: rgba(135, 149, 165, 0.85);
+  border-style: dashed;
+}
+
 .monitoring-callout.has-value {
   border-color: var(--line-strong);
 }
@@ -672,9 +663,50 @@ pre {
   opacity: 0.72;
 }
 
+.monitoring-callout.top-left::before,
+.monitoring-callout.left::before,
+.monitoring-callout.bottom-left::before {
+  top: 50%;
+  right: -94px;
+  width: 94px;
+  border-top-width: 1.5px;
+  transform: translateY(-50%);
+}
+
+.monitoring-callout.top-right::before,
+.monitoring-callout.right::before,
+.monitoring-callout.bottom-right::before {
+  top: 50%;
+  left: -94px;
+  width: 94px;
+  border-top-width: 1.5px;
+  transform: translateY(-50%);
+}
+
+.monitoring-callout.top-left::after,
+.monitoring-callout.bottom-left::after {
+  right: -94px;
+  width: 0;
+  height: 88px;
+  border-right-width: 1.5px;
+}
+
+.monitoring-callout.top-right::after,
+.monitoring-callout.bottom-right::after {
+  left: -94px;
+  width: 0;
+  height: 88px;
+  border-left-width: 1.5px;
+}
+
 .monitoring-callout.top-left {
   top: 18px;
   left: 20px;
+}
+
+.monitoring-callout.top-left::after {
+  top: 50%;
+  transform: translateY(-100%);
 }
 
 .monitoring-callout.left {
@@ -688,9 +720,19 @@ pre {
   left: 20px;
 }
 
+.monitoring-callout.bottom-left::after {
+  bottom: 50%;
+  transform: translateY(100%);
+}
+
 .monitoring-callout.top-right {
   top: 18px;
   right: 20px;
+}
+
+.monitoring-callout.top-right::after {
+  top: 50%;
+  transform: translateY(-100%);
 }
 
 .monitoring-callout.right {
@@ -702,6 +744,11 @@ pre {
 .monitoring-callout.bottom-right {
   right: 20px;
   bottom: 18px;
+}
+
+.monitoring-callout.bottom-right::after {
+  bottom: 50%;
+  transform: translateY(100%);
 }
 
 .monitoring-swatch {
@@ -1413,10 +1460,6 @@ pre {
     gap: 14px;
   }
 
-  .monitoring-lines {
-    display: none;
-  }
-
   .monitoring-center,
   .monitoring-callout {
     position: relative;
@@ -1435,6 +1478,11 @@ pre {
 
   .monitoring-callout {
     width: 100%;
+  }
+
+  .monitoring-callout::before,
+  .monitoring-callout::after {
+    display: none;
   }
 
   .steps-grid {
