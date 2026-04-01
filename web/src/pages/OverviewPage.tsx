@@ -132,10 +132,6 @@ export function OverviewPage() {
 
   const monitoredCount = monitoringSlices.reduce((total, slice) => total + slice.count, 0);
   const activeMonitoringSlices = monitoringSlices.filter((slice) => slice.count > 0);
-  const leftMonitoringSlices = monitoringSlices.filter((slice) => slice.position.includes("left"));
-  const rightMonitoringSlices = monitoringSlices.filter((slice) =>
-    slice.position.includes("right")
-  );
   const donutStops: string[] = [];
   let offset = 0;
 
@@ -244,39 +240,6 @@ export function OverviewPage() {
             <div className="empty-state">Aucun serveur enregistré pour le moment.</div>
           ) : (
             <div className="monitoring-constellation">
-              <div className="monitoring-column monitoring-column-left">
-                {leftMonitoringSlices.map((slice) => {
-                  const percentage =
-                    monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
-
-                  return (
-                    <article
-                      key={slice.key}
-                      className={`monitoring-callout ${slice.position} ${
-                        slice.count > 0 ? "has-value" : "is-empty"
-                      }`}
-                    >
-                      <span
-                        className="monitoring-swatch"
-                        style={{ backgroundColor: slice.color }}
-                        aria-hidden="true"
-                      />
-                      <div className="monitoring-copy">
-                        <div className="monitoring-copy-top">
-                          <strong>{slice.label}</strong>
-                          <small>{percentage}%</small>
-                        </div>
-                        <p>{slice.description}</p>
-                      </div>
-                      <div className="monitoring-value">
-                        <strong>{slice.count}</strong>
-                        <small>serveur{slice.count > 1 ? "s" : ""}</small>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-
               <div className="monitoring-center">
                 <div className="monitoring-donut-shell">
                   <div className="monitoring-donut" style={donutStyle} aria-hidden="true" />
@@ -288,38 +251,36 @@ export function OverviewPage() {
                 </div>
               </div>
 
-              <div className="monitoring-column monitoring-column-right">
-                {rightMonitoringSlices.map((slice) => {
-                  const percentage =
-                    monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
+              {monitoringSlices.map((slice) => {
+                const percentage =
+                  monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
 
-                  return (
-                    <article
-                      key={slice.key}
-                      className={`monitoring-callout ${slice.position} ${
-                        slice.count > 0 ? "has-value" : "is-empty"
-                      }`}
-                    >
-                      <span
-                        className="monitoring-swatch"
-                        style={{ backgroundColor: slice.color }}
-                        aria-hidden="true"
-                      />
-                      <div className="monitoring-copy">
-                        <div className="monitoring-copy-top">
-                          <strong>{slice.label}</strong>
-                          <small>{percentage}%</small>
-                        </div>
-                        <p>{slice.description}</p>
+                return (
+                  <article
+                    key={slice.key}
+                    className={`monitoring-callout ${slice.position} ${
+                      slice.count > 0 ? "has-value" : "is-empty"
+                    }`}
+                  >
+                    <span
+                      className="monitoring-swatch"
+                      style={{ backgroundColor: slice.color }}
+                      aria-hidden="true"
+                    />
+                    <div className="monitoring-copy">
+                      <div className="monitoring-copy-top">
+                        <strong>{slice.label}</strong>
+                        <small>{percentage}%</small>
                       </div>
-                      <div className="monitoring-value">
-                        <strong>{slice.count}</strong>
-                        <small>serveur{slice.count > 1 ? "s" : ""}</small>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
+                      <p>{slice.description}</p>
+                    </div>
+                    <div className="monitoring-value">
+                      <strong>{slice.count}</strong>
+                      <small>serveur{slice.count > 1 ? "s" : ""}</small>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
 
