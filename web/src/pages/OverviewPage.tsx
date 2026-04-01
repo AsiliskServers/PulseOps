@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { getSummary, listServers } from "../api/servers";
 import { formatDate, resolveServerState } from "../lib/presentation";
@@ -22,7 +23,24 @@ function serverUnitLabel(count: number) {
   return count > 1 ? "serveurs" : "serveur";
 }
 
+function randomConnectorAnimations() {
+  return [
+    "monitoringPathTopLeft",
+    "monitoringPathLeft",
+    "monitoringPathBottomLeft",
+    "monitoringPathTopRight",
+    "monitoringPathRight",
+    "monitoringPathBottomRight",
+  ].map((pathId) => ({
+    pathId,
+    duration: `${(2.9 + Math.random() * 0.9).toFixed(2)}s`,
+    begin: `${(Math.random() * 1.6).toFixed(2)}s`,
+  }));
+}
+
 export function OverviewPage() {
+  const [connectorAnimations] = useState(randomConnectorAnimations);
+
   const summaryQuery = useQuery({
     queryKey: ["summary"],
     queryFn: getSummary,
@@ -310,36 +328,23 @@ export function OverviewPage() {
                   d="M 478 214 H 514"
                 />
 
-                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
-                  <animateMotion dur="3.1s" repeatCount="indefinite" rotate="auto">
-                    <mpath href="#monitoringPathTopLeft" />
-                  </animateMotion>
-                </circle>
-                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
-                  <animateMotion dur="3.35s" begin="0.35s" repeatCount="indefinite" rotate="auto">
-                    <mpath href="#monitoringPathLeft" />
-                  </animateMotion>
-                </circle>
-                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
-                  <animateMotion dur="3.15s" begin="0.75s" repeatCount="indefinite" rotate="auto">
-                    <mpath href="#monitoringPathBottomLeft" />
-                  </animateMotion>
-                </circle>
-                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
-                  <animateMotion dur="3.05s" begin="0.2s" repeatCount="indefinite" rotate="auto">
-                    <mpath href="#monitoringPathTopRight" />
-                  </animateMotion>
-                </circle>
-                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
-                  <animateMotion dur="3.3s" begin="0.55s" repeatCount="indefinite" rotate="auto">
-                    <mpath href="#monitoringPathRight" />
-                  </animateMotion>
-                </circle>
-                <circle className="monitoring-connector-orb" r="5" filter="url(#monitoringGlow)">
-                  <animateMotion dur="3.2s" begin="0.9s" repeatCount="indefinite" rotate="auto">
-                    <mpath href="#monitoringPathBottomRight" />
-                  </animateMotion>
-                </circle>
+                {connectorAnimations.map((animation) => (
+                  <circle
+                    key={animation.pathId}
+                    className="monitoring-connector-orb"
+                    r="5"
+                    filter="url(#monitoringGlow)"
+                  >
+                    <animateMotion
+                      dur={animation.duration}
+                      begin={animation.begin}
+                      repeatCount="indefinite"
+                      rotate="auto"
+                    >
+                      <mpath href={`#${animation.pathId}`} />
+                    </animateMotion>
+                  </circle>
+                ))}
               </svg>
 
               <div className="monitoring-center">
