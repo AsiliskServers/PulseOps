@@ -9,14 +9,12 @@ type MonitoringSlice = {
   description: string;
   count: number;
   color: string;
-  position:
-    | "top-left"
-    | "left"
-    | "bottom-left"
-    | "top-right"
-    | "right"
-    | "bottom-right";
+  column: "left" | "right";
 };
+
+function serverUnitLabel(count: number) {
+  return count > 1 ? "serveurs" : "serveur";
+}
 
 export function OverviewPage() {
   const summaryQuery = useQuery({
@@ -52,7 +50,7 @@ export function OverviewPage() {
       description: "Correctifs sécurité à traiter.",
       count: 0,
       color: "#aa4359",
-      position: "top-left",
+      column: "left",
     },
     {
       key: "watch",
@@ -60,7 +58,7 @@ export function OverviewPage() {
       description: "Dernier report ancien ou instable.",
       count: 0,
       color: "#446c9c",
-      position: "left",
+      column: "left",
     },
     {
       key: "no_report",
@@ -68,7 +66,7 @@ export function OverviewPage() {
       description: "Agent enrôlé sans snapshot exploitable.",
       count: 0,
       color: "#a3adb8",
-      position: "bottom-left",
+      column: "left",
     },
     {
       key: "pending_updates",
@@ -76,7 +74,7 @@ export function OverviewPage() {
       description: "Updates disponibles hors sécurité.",
       count: 0,
       color: "#d39a2c",
-      position: "top-right",
+      column: "right",
     },
     {
       key: "up_to_date",
@@ -84,7 +82,7 @@ export function OverviewPage() {
       description: "Aucune mise à jour en attente.",
       count: 0,
       color: "#216e54",
-      position: "right",
+      column: "right",
     },
     {
       key: "offline",
@@ -92,7 +90,7 @@ export function OverviewPage() {
       description: "Machine non joignable ou état dégradé.",
       count: 0,
       color: "#5d6472",
-      position: "bottom-right",
+      column: "right",
     },
   ];
 
@@ -132,25 +130,36 @@ export function OverviewPage() {
 
   const monitoredCount = monitoringSlices.reduce((total, slice) => total + slice.count, 0);
   const activeMonitoringSlices = monitoringSlices.filter((slice) => slice.count > 0);
-  const donutStops: string[] = [];
-  let offset = 0;
+  const leftMonitoringSlices = monitoringSlices.filter((slice) => slice.column === "left");
+  const rightMonitoringSlices = monitoringSlices.filter((slice) => slice.column === "right");
 
-  for (const slice of monitoringSlices) {
-    if (monitoredCount === 0 || slice.count === 0) {
-      continue;
-    }
+  function renderMonitoringCallout(slice: MonitoringSlice) {
+    const percentage = monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
 
-    const angle = (slice.count / monitoredCount) * 360;
-    donutStops.push(`${slice.color} ${offset}deg ${offset + angle}deg`);
-    offset += angle;
+    return (
+      <article
+        key={slice.key}
+        className={`monitoring-callout ${slice.count > 0 ? "has-value" : "is-empty"}`}
+      >
+        <span
+          className="monitoring-swatch"
+          style={{ backgroundColor: slice.color }}
+          aria-hidden="true"
+        />
+        <div className="monitoring-copy">
+          <div className="monitoring-copy-top">
+            <strong>{slice.label}</strong>
+            <small>{percentage}%</small>
+          </div>
+          <p>{slice.description}</p>
+        </div>
+        <div className="monitoring-value">
+          <strong>{slice.count}</strong>
+          <small>{serverUnitLabel(slice.count)}</small>
+        </div>
+      </article>
+    );
   }
-
-  const donutStyle = {
-    backgroundImage:
-      monitoredCount > 0
-        ? `radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.35), transparent 34%), conic-gradient(${donutStops.join(", ")})`
-        : "radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.35), transparent 34%), conic-gradient(#dfe6ee 0deg 360deg)",
-  };
 
   return (
     <div className="page-column">
@@ -241,46 +250,66 @@ export function OverviewPage() {
           ) : (
             <div className="monitoring-constellation">
               <div className="monitoring-center">
-                <div className="monitoring-donut-shell">
-                  <div className="monitoring-donut" style={donutStyle} aria-hidden="true" />
-                  <div className="monitoring-donut-core">
+                <div className="monitoring-hub">
+                  <div className="monitoring-hub-copy">
                     <span>Parc monitoré</span>
                     <strong>{monitoredCount}</strong>
-                    <small>serveur{monitoredCount > 1 ? "s" : ""}</small>
+                    <small>{serverUnitLabel(monitoredCount)}</small>
+                  </div>
+
+                  <div className="monitoring-server-visual" aria-hidden="true">
+                    <div className="monitoring-server-stack">
+                      <div className="monitoring-server-unit">
+                        <span className="monitoring-server-slot" />
+                        <div className="monitoring-server-lights">
+                          <span />
+                          <span />
+                          <span />
+                        </div>
+                      </div>
+                      <div className="monitoring-server-unit">
+                        <span className="monitoring-server-slot" />
+                        <div className="monitoring-server-lights">
+                          <span />
+                          <span />
+                          <span />
+                        </div>
+                      </div>
+                      <div className="monitoring-server-unit">
+                        <span className="monitoring-server-slot" />
+                        <div className="monitoring-server-lights">
+                          <span />
+                          <span />
+                          <span />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="monitoring-signal-track">
+                      <span className="monitoring-signal-orb" />
+                    </div>
+                  </div>
+
+                  <div className="monitoring-hub-meta">
+                    <div className="monitoring-hub-stat">
+                      <span>Segments actifs</span>
+                      <strong>{activeMonitoringSlices.length}</strong>
+                    </div>
+                    <div className="monitoring-hub-stat">
+                      <span>Jobs</span>
+                      <strong>{summaryQuery.data?.queuedJobCount ?? 0}</strong>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {monitoringSlices.map((slice) => {
-                const percentage =
-                  monitoredCount > 0 ? Math.round((slice.count / monitoredCount) * 100) : 0;
+              <div className="monitoring-column monitoring-column-left">
+                {leftMonitoringSlices.map(renderMonitoringCallout)}
+              </div>
 
-                return (
-                  <article
-                    key={slice.key}
-                    className={`monitoring-callout ${slice.position} ${
-                      slice.count > 0 ? "has-value" : "is-empty"
-                    }`}
-                  >
-                    <span
-                      className="monitoring-swatch"
-                      style={{ backgroundColor: slice.color }}
-                      aria-hidden="true"
-                    />
-                    <div className="monitoring-copy">
-                      <div className="monitoring-copy-top">
-                        <strong>{slice.label}</strong>
-                        <small>{percentage}%</small>
-                      </div>
-                      <p>{slice.description}</p>
-                    </div>
-                    <div className="monitoring-value">
-                      <strong>{slice.count}</strong>
-                      <small>serveur{slice.count > 1 ? "s" : ""}</small>
-                    </div>
-                  </article>
-                );
-              })}
+              <div className="monitoring-column monitoring-column-right">
+                {rightMonitoringSlices.map(renderMonitoringCallout)}
+              </div>
             </div>
           )}
 
