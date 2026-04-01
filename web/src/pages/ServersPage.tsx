@@ -7,13 +7,104 @@ import {
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
+import type { ServerSummary } from "../types";
+
+type BatchAction = "refresh" | "upgrade" | "agent_update";
+type SortField = "name" | "serverState" | "agentState" | "environment" | "lastSeenAt";
+type SortMode =
+  | "default"
+  | "asc"
+  | "desc"
+  | "priority"
+  | "reverse"
+  | "recent"
+  | "old";
+
+const stateOrder = {
+  critical: 0,
+  pending: 1,
+  neutral: 2,
+  ok: 3,
+} as const;
+
+const sortLabels: Record<SortField, Record<SortMode, string>> = {
+  name: {
+    default: "Normal",
+    asc: "A-Z",
+    desc: "Z-A",
+    priority: "Priorité",
+    reverse: "Inverse",
+    recent: "Récent",
+    old: "Vieux",
+  },
+  serverState: {
+    default: "Normal",
+    asc: "A-Z",
+    desc: "Z-A",
+    priority: "Priorité",
+    reverse: "Inverse",
+    recent: "Récent",
+    old: "Vieux",
+  },
+  agentState: {
+    default: "Normal",
+    asc: "A-Z",
+    desc: "Z-A",
+    priority: "Priorité",
+    reverse: "Inverse",
+    recent: "Récent",
+    old: "Vieux",
+  },
+  environment: {
+    default: "Normal",
+    asc: "A-Z",
+    desc: "Z-A",
+    priority: "Priorité",
+    reverse: "Inverse",
+    recent: "Récent",
+    old: "Vieux",
+  },
+  lastSeenAt: {
+    default: "Normal",
+    asc: "A-Z",
+    desc: "Z-A",
+    priority: "Priorité",
+    reverse: "Inverse",
+    recent: "Récent",
+    old: "Vieux",
+  },
+};
+
+function compareDateStrings(left: string | null, right: string | null) {
+  const leftValue = left ? new Date(left).getTime() : 0;
+  const rightValue = right ? new Date(right).getTime() : 0;
+  return leftValue - rightValue;
+}
+
+function nextSortMode(field: SortField, mode: SortMode): SortMode {
+  if (field === "lastSeenAt") {
+    if (mode === "default") return "recent";
+    if (mode === "recent") return "old";
+    return "default";
+  }
+
+  if (field === "serverState" || field === "agentState") {
+    if (mode === "default") return "priority";
+    if (mode === "priority") return "reverse";
+    return "default";
+  }
+
+  if (mode === "default") return "asc";
+  if (mode === "asc") return "desc";
+  return "default";
+}
 
 export function ServersPage() {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [batchAction, setBatchAction] = useState<"refresh" | "upgrade" | "agent_update" | null>(
-    null
-  );
+  const [batchAction, setBatchAction] = useState<BatchAction | null>(null);
+  const [sortField, setSortField] = useState<SortField>("lastSeenAt");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const queryClient = useQueryClient();
 
@@ -29,7 +120,7 @@ export function ServersPage() {
     refetchInterval: 5000,
   });
 
-  const servers =
+  const filteredServers =
     serversQuery.data?.filter((server) => {
       const haystack =
         `${server.name} ${server.environment} ${server.notes ?? ""} ${server.hostname ?? ""} ${
@@ -37,6 +128,52 @@ export function ServersPage() {
         } ${server.agentVersion ?? ""}`.toLowerCase();
       return haystack.includes(deferredSearch);
     }) ?? [];
+
+  const servers = filteredServers
+    .map((server, index) => ({
+      server,
+      index,
+      state: resolveServerState(server),
+      agentState: resolveAgentVersionState(server),
+    }))
+    .sort((left, right) => {
+      if (sortMode === "default") {
+        return left.index - right.index;
+      }
+
+      let comparison = 0;
+
+      if (sortField === "name") {
+        comparison = left.server.name.localeCompare(right.server.name, "fr", {
+          sensitivity: "base",
+        });
+      } else if (sortField === "environment") {
+        comparison = left.server.environment.localeCompare(right.server.environment, "fr", {
+          sensitivity: "base",
+        });
+      } else if (sortField === "lastSeenAt") {
+        comparison = compareDateStrings(left.server.lastSeenAt, right.server.lastSeenAt);
+        if (sortMode === "recent") {
+          comparison *= -1;
+        }
+      } else if (sortField === "serverState") {
+        comparison = stateOrder[left.state.tone] - stateOrder[right.state.tone];
+        if (sortMode === "reverse") {
+          comparison *= -1;
+        }
+      } else if (sortField === "agentState") {
+        comparison = stateOrder[left.agentState.tone] - stateOrder[right.agentState.tone];
+        if (sortMode === "reverse") {
+          comparison *= -1;
+        }
+      }
+
+      if (comparison !== 0) {
+        return comparison;
+      }
+
+      return left.index - right.index;
+    });
 
   useEffect(() => {
     if (!serversQuery.data) {
@@ -48,7 +185,7 @@ export function ServersPage() {
   }, [serversQuery.data]);
 
   const batchMutation = useMutation({
-    mutationFn: (type: "refresh" | "upgrade" | "agent_update") =>
+    mutationFn: (type: BatchAction) =>
       queueBatchJobs({
         serverIds: selectedIds,
         type,
@@ -66,14 +203,16 @@ export function ServersPage() {
     },
   });
 
-  const visibleIds = servers.map((server) => server.id);
+  const visibleIds = servers.map(({ server }) => server.id);
   const selectedVisibleCount = visibleIds.filter((id) => selectedIds.includes(id)).length;
   const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
   const hasSelection = selectedIds.length > 0;
 
   function toggleServerSelection(serverId: string, checked: boolean) {
     setSelectedIds((current) =>
-      checked ? Array.from(new Set([...current, serverId])) : current.filter((id) => id !== serverId)
+      checked
+        ? Array.from(new Set([...current, serverId]))
+        : current.filter((id) => id !== serverId)
     );
   }
 
@@ -87,9 +226,27 @@ export function ServersPage() {
     });
   }
 
-  function runBatchAction(type: "refresh" | "upgrade" | "agent_update") {
+  function runBatchAction(type: BatchAction) {
     setBatchAction(type);
     batchMutation.mutate(type);
+  }
+
+  function cycleSort(field: SortField) {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortMode(nextSortMode(field, "default"));
+      return;
+    }
+
+    setSortMode((current) => nextSortMode(field, current));
+  }
+
+  function getSortLabel(field: SortField) {
+    if (sortField !== field) {
+      return "Normal";
+    }
+
+    return sortLabels[field][sortMode];
   }
 
   const topError =
@@ -193,64 +350,90 @@ export function ServersPage() {
 
         <div className="table-head">
           <span></span>
-          <span>Serveur</span>
-          <span>État</span>
-          <span>Agent</span>
-          <span>Environnement</span>
-          <span>Dernier retour</span>
+          <button className="table-sort-button" type="button" onClick={() => cycleSort("name")}>
+            <span>Serveur</span>
+            <small>{getSortLabel("name")}</small>
+          </button>
+          <button
+            className="table-sort-button"
+            type="button"
+            onClick={() => cycleSort("serverState")}
+          >
+            <span>État</span>
+            <small>{getSortLabel("serverState")}</small>
+          </button>
+          <button
+            className="table-sort-button"
+            type="button"
+            onClick={() => cycleSort("agentState")}
+          >
+            <span>État agent</span>
+            <small>{getSortLabel("agentState")}</small>
+          </button>
+          <button
+            className="table-sort-button"
+            type="button"
+            onClick={() => cycleSort("environment")}
+          >
+            <span>Environnement</span>
+            <small>{getSortLabel("environment")}</small>
+          </button>
+          <button
+            className="table-sort-button align-end"
+            type="button"
+            onClick={() => cycleSort("lastSeenAt")}
+          >
+            <span>Dernier retour</span>
+            <small>{getSortLabel("lastSeenAt")}</small>
+          </button>
         </div>
 
         <div className="server-table">
           {servers.length === 0 ? (
             <div className="empty-state">Aucun serveur ne correspond à ce filtre.</div>
           ) : (
-            servers.map((server) => {
-              const state = resolveServerState(server);
-              const agentState = resolveAgentVersionState(server);
+            servers.map(({ server, state, agentState }) => (
+              <div
+                key={server.id}
+                className={`table-row selectable-row ${
+                  selectedIds.includes(server.id) ? "selected" : ""
+                }`}
+              >
+                <label className="row-check">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(server.id)}
+                    onChange={(event) => toggleServerSelection(server.id, event.target.checked)}
+                  />
+                </label>
 
-              return (
-                <div
-                  key={server.id}
-                  className={`table-row selectable-row ${
-                    selectedIds.includes(server.id) ? "selected" : ""
-                  }`}
-                >
-                  <label className="row-check">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(server.id)}
-                      onChange={(event) => toggleServerSelection(server.id, event.target.checked)}
-                    />
-                  </label>
-
-                  <div>
-                    <Link className="table-name-link" to={`/servers/${server.id}`}>
-                      <strong>{server.name}</strong>
-                    </Link>
-                    <p>{server.hostname ?? "Hostname inconnu"}</p>
-                  </div>
-
-                  <div className="table-stack">
-                    <span className={`server-badge ${state.tone}`}>{state.label}</span>
-                    <small>{server.latestSnapshot?.upgradableCount ?? 0} update(s)</small>
-                  </div>
-
-                  <div className="table-stack">
-                    <span className={`server-badge ${agentState.tone}`}>{agentState.label}</span>
-                    <small>{server.agentVersion ?? "Version inconnue"}</small>
-                  </div>
-
-                  <div>
-                    <span className="server-badge neutral">{server.environment}</span>
-                  </div>
-
-                  <div className="table-row-side">
-                    <span>{formatDate(server.lastSeenAt)}</span>
-                    <small>{server.pendingJobsCount} jobs</small>
-                  </div>
+                <div>
+                  <Link className="table-name-link" to={`/servers/${server.id}`}>
+                    <strong>{server.name}</strong>
+                  </Link>
+                  <p>{server.hostname ?? "Hostname inconnu"}</p>
                 </div>
-              );
-            })
+
+                <div className="table-stack">
+                  <span className={`server-badge ${state.tone}`}>{state.label}</span>
+                  <small>{server.latestSnapshot?.upgradableCount ?? 0} update(s)</small>
+                </div>
+
+                <div className="table-stack">
+                  <span className={`server-badge ${agentState.tone}`}>{agentState.label}</span>
+                  <small>{server.agentVersion ?? "Version inconnue"}</small>
+                </div>
+
+                <div>
+                  <span className="server-badge neutral">{server.environment}</span>
+                </div>
+
+                <div className="table-row-side">
+                  <span>{formatDate(server.lastSeenAt)}</span>
+                  <small>{server.pendingJobsCount} jobs</small>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </section>

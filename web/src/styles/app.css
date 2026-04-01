@@ -655,6 +655,39 @@ pre {
   color: var(--muted);
 }
 
+.table-sort-button {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.table-sort-button small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--line-strong);
+}
+
+.table-sort-button:hover span {
+  color: var(--accent);
+}
+
+.table-sort-button.align-end {
+  justify-items: end;
+  text-align: right;
+}
+
 .table-row {
   display: grid;
   grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 160px;
