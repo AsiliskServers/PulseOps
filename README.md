@@ -129,6 +129,39 @@ Par defaut :
 - il poll les jobs toutes les `10 s`
 - il verifie les nouvelles releases agent toutes les `15 min`
 
+### Supprimer proprement un agent d'une machine
+
+Sur la machine Debian cible, en `root` :
+
+```bash
+systemctl stop pulseops-agent || true
+systemctl disable pulseops-agent || true
+rm -f /etc/systemd/system/pulseops-agent.service
+systemctl daemon-reload
+systemctl reset-failed
+rm -rf /opt/pulseops-agent
+```
+
+Verification :
+
+```bash
+systemctl status pulseops-agent --no-pager || true
+test -d /opt/pulseops-agent && echo "agent encore present" || echo "agent supprime"
+```
+
+Cette suppression retire :
+
+- le service `systemd`
+- le binaire `pulseops-agent`
+- le fichier de configuration local
+- le `state.json` et les secrets d'enrollement stockes localement
+
+Important :
+
+- cela ne supprime pas automatiquement l'entree du serveur dans PulseOps
+- pour nettoyer aussi le parc, supprime ensuite le serveur depuis l'interface PulseOps
+- si tu reinstalles l'agent plus tard, la machine sera reenrolee comme un nouvel agent
+
 ## Reverse proxy
 
 En production, le plus simple est :
