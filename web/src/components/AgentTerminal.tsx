@@ -91,6 +91,11 @@ function clampTerminalSize(input: { cols: number; rows: number }) {
   };
 }
 
+function isPinnedToBottom(terminal: Terminal) {
+  const buffer = terminal.buffer.active;
+  return buffer.viewportY >= buffer.baseY;
+}
+
 export function AgentTerminal({ serverId, serverName, onClose }: Props) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -109,6 +114,8 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
     const terminal = new Terminal({
       convertEol: true,
       cursorBlink: true,
+      scrollback: 5000,
+      scrollOnUserInput: true,
       fontFamily: '"JetBrains Mono", "SFMono-Regular", Consolas, monospace',
       fontSize: 14,
       lineHeight: 1.25,
@@ -161,7 +168,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
 
       flushTimerRef.current = window.setTimeout(() => {
         void flushInput();
-      }, 40);
+      }, 8);
     };
 
     terminal.onData((data) => {
@@ -191,7 +198,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
           const message = cause instanceof Error ? cause.message : "Impossible de redimensionner le terminal";
           setError(resolveTerminalErrorMessage(message));
         });
-      }, 120);
+      }, 80);
     });
 
     if (canvasRef.current) {
@@ -210,7 +217,9 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
 
         setStatus(payload.status);
         if (payload.outputHistory) {
-          terminal.write(payload.outputHistory);
+          terminal.write(payload.outputHistory, () => {
+            terminal.scrollToBottom();
+          });
         }
       });
 
@@ -229,7 +238,12 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
           { type: "output" }
         >;
 
-        terminal.write(payload.data);
+        const shouldStick = isPinnedToBottom(terminal);
+        terminal.write(payload.data, () => {
+          if (shouldStick) {
+            terminal.scrollToBottom();
+          }
+        });
       });
 
       stream.addEventListener("closed", (event) => {
@@ -273,8 +287,8 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
         await resizeTerminalSession(
           session.sessionId,
           clampTerminalSize({
-          cols: terminal.cols,
-          rows: terminal.rows,
+            cols: terminal.cols,
+            rows: terminal.rows,
           })
         );
 
@@ -350,7 +364,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
               cause instanceof Error ? cause.message : "Impossible de coller dans le terminal";
             setError(resolveTerminalErrorMessage(message));
           });
-        }, 20);
+        }, 8);
       }
       terminalRef.current?.focus();
     } catch (cause) {

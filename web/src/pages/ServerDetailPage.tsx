@@ -267,7 +267,7 @@ export function ServerDetailPage() {
   }
 
   return (
-    <div className="page-column">
+    <div className={`page-column server-detail-page ${terminalOpen ? "terminal-mode" : ""}`}>
       <section className="page-header panel">
         <div className="page-heading">
           <p className="section-kicker">Serveur</p>

@@ -103,6 +103,23 @@ func (manager *Manager) CollectUpdates() agent.TerminalSyncRequest {
 	return request
 }
 
+func (manager *Manager) HasActiveSessions() bool {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	for _, current := range manager.sessions {
+		current.mu.Lock()
+		active := !current.closed || !current.closeSent
+		current.mu.Unlock()
+
+		if active {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (manager *Manager) Shutdown() {
 	manager.mu.Lock()
 	ids := make([]string, 0, len(manager.sessions))

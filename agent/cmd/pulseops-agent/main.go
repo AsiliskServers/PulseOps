@@ -22,6 +22,11 @@ import (
 
 var version = "dev"
 
+const (
+	terminalSyncIdleInterval   = 250 * time.Millisecond
+	terminalSyncActiveInterval = 75 * time.Millisecond
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatalf("usage: %s <enroll|run>", os.Args[0])
@@ -179,8 +184,8 @@ func runService(args []string) error {
 	defer jobTicker.Stop()
 	updateTicker := time.NewTicker(time.Duration(cfg.AutoUpdateIntervalSeconds) * time.Second)
 	defer updateTicker.Stop()
-	terminalTicker := time.NewTicker(1 * time.Second)
-	defer terminalTicker.Stop()
+	terminalTimer := time.NewTimer(terminalSyncIdleInterval)
+	defer terminalTimer.Stop()
 
 	reportOnce := func() error {
 		summary, err := platform.RunRefresh()
@@ -280,6 +285,22 @@ func runService(args []string) error {
 		return shellManager.Apply(actions)
 	}
 
+	resetTerminalTimer := func() {
+		interval := terminalSyncIdleInterval
+		if shellManager.HasActiveSessions() {
+			interval = terminalSyncActiveInterval
+		}
+
+		if !terminalTimer.Stop() {
+			select {
+			case <-terminalTimer.C:
+			default:
+			}
+		}
+
+		terminalTimer.Reset(interval)
+	}
+
 	if err := reportOnce(); err != nil {
 		log.Printf("initial report failed: %v", err)
 	}
@@ -296,6 +317,7 @@ func runService(args []string) error {
 	if err := syncTerminals(); err != nil {
 		log.Printf("initial terminal sync failed: %v", err)
 	}
+	resetTerminalTimer()
 
 	for {
 		select {
@@ -320,10 +342,11 @@ func runService(args []string) error {
 			} else if updated {
 				return nil
 			}
-		case <-terminalTicker.C:
+		case <-terminalTimer.C:
 			if err := syncTerminals(); err != nil {
 				log.Printf("terminal sync failed: %v", err)
 			}
+			resetTerminalTimer()
 		}
 	}
 }

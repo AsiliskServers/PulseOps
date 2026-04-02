@@ -411,6 +411,7 @@ pre {
 }
 
 .app-main {
+  --app-main-y-padding: 56px;
   min-width: 0;
   padding: 28px;
 }
@@ -421,6 +422,14 @@ pre {
   margin: 0;
   display: grid;
   gap: 20px;
+}
+
+.server-detail-page.terminal-mode {
+  height: calc(100dvh - var(--app-main-y-padding));
+  min-height: 0;
+  overflow: hidden;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: stretch;
 }
 
 .panel {
@@ -1699,6 +1708,21 @@ pre {
 .detail-stage-terminal {
   display: none;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.server-detail-page.terminal-mode .detail-stage {
+  min-height: 0;
+}
+
+.server-detail-page.terminal-mode .detail-stage-content,
+.server-detail-page.terminal-mode .detail-stage-terminal,
+.server-detail-page.terminal-mode .detail-layout,
+.server-detail-page.terminal-mode .detail-primary,
+.server-detail-page.terminal-mode .detail-secondary {
+  min-height: 0;
 }
 
 .detail-stage.terminal-active .detail-stage-content {
@@ -1710,6 +1734,8 @@ pre {
 
 .detail-stage.terminal-active .detail-stage-terminal {
   display: block;
+  min-height: 0;
+  height: 100%;
   animation: terminal-stage-in 260ms ease both;
 }
 
@@ -1918,6 +1944,8 @@ pre {
 
 .agent-terminal-surface {
   min-height: 0;
+  height: 100%;
+  display: grid;
   border-radius: 20px;
   border: 1px solid rgba(123, 146, 168, 0.22);
   background:
@@ -1929,11 +1957,25 @@ pre {
 .agent-terminal-canvas {
   width: 100%;
   height: 100%;
+  min-height: 0;
   padding: 18px;
 }
 
 .agent-terminal-canvas .xterm {
   height: 100%;
+  overflow: hidden;
+}
+
+.agent-terminal-canvas .xterm-screen {
+  height: 100% !important;
+}
+
+.agent-terminal-canvas .xterm-viewport {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
 }
 
 .agent-terminal-footer {
@@ -1953,7 +1995,9 @@ pre {
 }
 
 .agent-terminal-shell {
-  min-height: 72vh;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 14px;
@@ -2190,6 +2234,7 @@ pre {
 
 @media (min-width: 1440px) {
   .app-main {
+    --app-main-y-padding: 72px;
     padding: 32px 36px 40px;
   }
 
@@ -2292,6 +2337,7 @@ pre {
 
 @media (max-height: 1100px) and (min-width: 1281px) {
   .app-main {
+    --app-main-y-padding: 48px;
     padding: 22px 24px 26px;
   }
 
@@ -2517,6 +2563,7 @@ pre {
 
 @media (max-width: 820px) {
   .app-main {
+    --app-main-y-padding: 36px;
     padding: 18px;
   }
 
