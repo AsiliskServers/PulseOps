@@ -9,6 +9,24 @@ import {
 } from "../lib/presentation";
 import { buildSshCommand, launchSsh } from "../lib/ssh";
 
+function TerminalIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="2.5" y="3.5" width="15" height="13" rx="3" />
+      <path d="M6.5 8L8.75 10L6.5 12" />
+      <path d="M10.75 12H13.5" />
+    </svg>
+  );
+}
+
 type BatchAction = "refresh" | "upgrade" | "agent_update";
 type SortField = "name" | "serverState" | "agentState" | "environment" | "lastSeenAt";
 type SortMode =
@@ -440,9 +458,10 @@ export function ServersPage() {
                       void launchSsh(server);
                     }}
                     disabled={!sshCommand}
-                    title={sshCommand ?? "Configurer un hote SSH pour ce serveur"}
+                    aria-label="Ouvrir le terminal via agent"
+                    title={sshCommand ?? "Configurer un hôte SSH pour ce serveur"}
                   >
-                    SSH
+                    <TerminalIcon />
                   </button>
                 </div>
 

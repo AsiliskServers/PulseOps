@@ -1587,6 +1587,17 @@ pre {
 
 .ssh-launch-button {
   min-width: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ssh-launch-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .bulk-toolbar {

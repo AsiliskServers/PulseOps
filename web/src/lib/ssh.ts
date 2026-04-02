@@ -26,21 +26,27 @@ export function buildSshCommand(server: SshServer): string | null {
   return port === 22 ? `ssh root@${host}` : `ssh -p ${port} root@${host}`;
 }
 
-export function buildSshUri(server: SshServer): string | null {
-  const host = resolveSshHost(server);
-  if (!host) {
-    return null;
+export function getAgentTerminalMessage(server: SshServer): string {
+  const command = buildSshCommand(server);
+
+  if (!command) {
+    return "Aucun hôte SSH n'est configuré pour ce serveur. Renseigne l'accès SSH dans la fiche du serveur avant d'ouvrir un terminal via l'agent.";
   }
 
-  const port = resolveSshPort(server);
-  return `ssh://root@${host}:${port}`;
+  return [
+    "Le terminal via agent n'est pas encore branché sur cette instance.",
+    "",
+    "Le bouton n'ouvre plus de lien direct ssh:// pour éviter les erreurs navigateur.",
+    "La commande SSH a été copiée dans le presse-papiers comme solution de secours :",
+    command,
+  ].join("\n");
 }
 
 export async function launchSsh(server: SshServer): Promise<boolean> {
   const command = buildSshCommand(server);
-  const uri = buildSshUri(server);
 
-  if (!command || !uri) {
+  if (!command) {
+    window.alert(getAgentTerminalMessage(server));
     return false;
   }
 
@@ -48,10 +54,10 @@ export async function launchSsh(server: SshServer): Promise<boolean> {
     try {
       await navigator.clipboard.writeText(command);
     } catch {
-      // Ignore clipboard errors and still try to open the SSH handler.
+      // Ignore clipboard errors and still show the fallback message.
     }
   }
 
-  window.location.href = uri;
-  return true;
+  window.alert(getAgentTerminalMessage(server));
+  return false;
 }
