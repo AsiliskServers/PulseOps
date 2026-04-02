@@ -15,6 +15,7 @@ import (
 	"github.com/AsiliskServers/PulseOps/agent/internal/agent"
 	"github.com/AsiliskServers/PulseOps/agent/internal/config"
 	"github.com/AsiliskServers/PulseOps/agent/internal/platform"
+	"github.com/AsiliskServers/PulseOps/agent/internal/shell"
 	"github.com/AsiliskServers/PulseOps/agent/internal/state"
 	"github.com/AsiliskServers/PulseOps/agent/internal/update"
 )
@@ -166,6 +167,8 @@ func runService(args []string) error {
 	}
 
 	client := agent.NewClient(cfg.ServerURL)
+	shellManager := shell.NewManager()
+	defer shellManager.Shutdown()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -176,6 +179,8 @@ func runService(args []string) error {
 	defer jobTicker.Stop()
 	updateTicker := time.NewTicker(time.Duration(cfg.AutoUpdateIntervalSeconds) * time.Second)
 	defer updateTicker.Stop()
+	terminalTicker := time.NewTicker(1 * time.Second)
+	defer terminalTicker.Stop()
 
 	reportOnce := func() error {
 		summary, err := platform.RunRefresh()
@@ -262,6 +267,19 @@ func runService(args []string) error {
 		return shouldRestart, sendErr
 	}
 
+	syncTerminals := func() error {
+		updates := shellManager.CollectUpdates()
+		updates.AgentID = currentState.AgentID
+		updates.AgentSecret = currentState.AgentSecret
+
+		actions, err := client.SyncTerminals(ctx, currentState.AgentID, currentState.AgentSecret, updates)
+		if err != nil {
+			return err
+		}
+
+		return shellManager.Apply(actions)
+	}
+
 	if err := reportOnce(); err != nil {
 		log.Printf("initial report failed: %v", err)
 	}
@@ -273,6 +291,10 @@ func runService(args []string) error {
 		}
 	} else if shouldRestart {
 		return nil
+	}
+
+	if err := syncTerminals(); err != nil {
+		log.Printf("initial terminal sync failed: %v", err)
 	}
 
 	for {
@@ -297,6 +319,10 @@ func runService(args []string) error {
 				log.Printf("auto-update check failed: %v", err)
 			} else if updated {
 				return nil
+			}
+		case <-terminalTicker.C:
+			if err := syncTerminals(); err != nil {
+				log.Printf("terminal sync failed: %v", err)
 			}
 		}
 	}

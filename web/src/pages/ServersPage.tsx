@@ -1,13 +1,12 @@
 import { useDeferredValue, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getSummary, listServers, queueBatchJobs } from "../api/servers";
 import {
   formatDate,
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
-import { buildSshCommand, launchSsh } from "../lib/ssh";
 
 function TerminalIcon() {
   return (
@@ -118,6 +117,7 @@ function nextSortMode(field: SortField, mode: SortMode): SortMode {
 }
 
 export function ServersPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [batchAction, setBatchAction] = useState<BatchAction | null>(null);
@@ -396,7 +396,7 @@ export function ServersPage() {
             <span>Environnement</span>
             <small>{getSortLabel("environment")}</small>
           </button>
-          <span className="table-head-label">SSH</span>
+          <span className="table-head-label table-head-label-center">Terminal</span>
           <button
             className="table-sort-button align-end"
             type="button"
@@ -412,7 +412,8 @@ export function ServersPage() {
             <div className="empty-state">Aucun serveur ne correspond à ce filtre.</div>
           ) : (
             servers.map(({ server, state, agentState }) => {
-              const sshCommand = buildSshCommand(server);
+              const canOpenTerminal = Boolean(server.agentId && server.isActive);
+              const sshCommand = canOpenTerminal ? "Ouvrir le terminal root via l'agent" : null;
 
               return (
                 <div
@@ -455,10 +456,10 @@ export function ServersPage() {
                     className="ghost-button small ssh-launch-button"
                     type="button"
                     onClick={() => {
-                      void launchSsh(server);
+                      navigate(`/servers/${server.id}?terminal=1`);
                     }}
-                    disabled={!sshCommand}
-                    aria-label="Ouvrir le terminal via agent"
+                    disabled={!canOpenTerminal}
+                    aria-label="Ouvrir le terminal via l'agent"
                     title={sshCommand ?? "Configurer un hôte SSH pour ce serveur"}
                   >
                     <TerminalIcon />

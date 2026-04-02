@@ -5,6 +5,7 @@ import { isRecord, readOptionalString, readRequiredString, validateEnvironment }
 import { decryptSecret, encryptSecret } from "../lib/encryption.js";
 import { generateOpaqueToken } from "../lib/tokens.js";
 import { getEnrollmentToken } from "../services/settings.js";
+import { TerminalBroker } from "../services/terminal-broker.js";
 
 function normalizeDate(value: string | undefined): Date | null {
   if (!value) {
@@ -47,7 +48,8 @@ async function authenticateAgent(body: unknown, env: ServerEnv) {
 
 export async function registerAgentRoutes(
   app: FastifyInstance,
-  env: ServerEnv
+  env: ServerEnv,
+  terminalBroker: TerminalBroker
 ): Promise<void> {
   app.post("/enroll", async (request, reply) => {
     try {
@@ -280,6 +282,68 @@ export async function registerAgentRoutes(
       return reply.send({ ok: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to store job result";
+      const status = message === "Invalid agent credentials" ? 401 : 400;
+      return reply.status(status).send({ message });
+    }
+  });
+
+  app.post("/terminals/sync", async (request, reply) => {
+    try {
+      const { body, server } = await authenticateAgent(request.body, env);
+
+      const opened =
+        Array.isArray(body.opened)
+          ? body.opened.filter((value): value is string => typeof value === "string")
+          : [];
+
+      const outputs = Array.isArray(body.outputs)
+        ? body.outputs.flatMap((value) => {
+            if (!isRecord(value) || typeof value.sessionId !== "string" || typeof value.data !== "string") {
+              return [];
+            }
+
+            return [
+              {
+                sessionId: value.sessionId,
+                data: value.data,
+              },
+            ];
+          })
+        : [];
+
+      const closed = Array.isArray(body.closed)
+        ? body.closed.flatMap((value) => {
+            if (!isRecord(value) || typeof value.sessionId !== "string") {
+              return [];
+            }
+
+            return [
+              {
+                sessionId: value.sessionId,
+                reason: typeof value.reason === "string" ? value.reason : null,
+              },
+            ];
+          })
+        : [];
+
+      const response = terminalBroker.syncForAgent(server.id, {
+        opened,
+        outputs,
+        closed,
+      });
+
+      await prisma.server.update({
+        where: {
+          id: server.id,
+        },
+        data: {
+          lastSeenAt: new Date(),
+        },
+      });
+
+      return reply.send(response);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to sync terminals";
       const status = message === "Invalid agent credentials" ? 401 : 400;
       return reply.status(status).send({ message });
     }

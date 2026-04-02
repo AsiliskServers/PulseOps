@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   clearServerHistory,
   deleteServer,
@@ -17,8 +17,13 @@ import {
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
-import { buildSshCommand, launchSsh, resolveSshHost, resolveSshPort } from "../lib/ssh";
+import { resolveSshHost, resolveSshPort } from "../lib/ssh";
 import type { Job, ServerDetail, ServerPayload } from "../types";
+
+const AgentTerminal = lazy(async () => {
+  const module = await import("../components/AgentTerminal");
+  return { default: module.AgentTerminal };
+});
 
 function TerminalIcon() {
   return (
@@ -102,6 +107,7 @@ function JobRow({ job }: { job: Job }) {
 export function ServerDetailPage() {
   const { serverId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
@@ -208,7 +214,9 @@ export function ServerDetailPage() {
     server?.recentJobs.find(isLiveJob) ??
     (server?.latestJob && isLiveJob(server.latestJob) ? server.latestJob : null);
   const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
-  const sshCommand = server ? buildSshCommand(server) : null;
+  const terminalOpen = searchParams.get("terminal") === "1";
+  const canOpenTerminal = Boolean(server?.agentId && server.isActive);
+  const sshCommand = canOpenTerminal ? "Ouvrir le terminal root via l'agent" : null;
   const hasHistory = Boolean(server?.latestSnapshot) || (server?.recentJobs.length ?? 0) > 0;
   const notesDirty = notesDraft !== (server?.notes ?? "");
   const agentUpdateLive = liveJob?.type === "agent_update";
@@ -222,6 +230,18 @@ export function ServerDetailPage() {
     (clearHistoryMutation.error instanceof Error && clearHistoryMutation.error.message) ||
     (deleteMutation.error instanceof Error && deleteMutation.error.message) ||
     null;
+
+  function setTerminalState(open: boolean) {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    if (open) {
+      nextSearchParams.set("terminal", "1");
+    } else {
+      nextSearchParams.delete("terminal");
+    }
+
+    setSearchParams(nextSearchParams, { replace: true });
+  }
 
   if (detailQuery.isLoading) {
     return (
@@ -255,10 +275,10 @@ export function ServerDetailPage() {
               className="ghost-button small ssh-launch-button"
               type="button"
               onClick={() => {
-                void launchSsh(server);
+                setTerminalState(true);
               }}
-              disabled={!sshCommand}
-              aria-label="Ouvrir le terminal via agent"
+              disabled={!canOpenTerminal}
+              aria-label="Ouvrir le terminal via l'agent"
               title={sshCommand ?? "Configurer un hôte SSH pour ce serveur"}
             >
               <TerminalIcon />
@@ -618,6 +638,16 @@ export function ServerDetailPage() {
         onClose={() => setModalOpen(false)}
         onSubmit={(payload) => updateMutation.mutate(payload)}
       />
+
+      {terminalOpen ? (
+        <Suspense fallback={null}>
+          <AgentTerminal
+            serverId={server.id}
+            serverName={server.name}
+            onClose={() => setTerminalState(false)}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

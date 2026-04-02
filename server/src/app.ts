@@ -9,12 +9,15 @@ import { registerAgentRoutes } from "./routes/agent.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerPublicRoutes } from "./routes/public.js";
 import { registerServerRoutes } from "./routes/servers.js";
+import { registerTerminalRoutes } from "./routes/terminals.js";
+import { TerminalBroker } from "./services/terminal-broker.js";
 
 export async function buildApp(env: ServerEnv) {
   const app = Fastify({
     logger: true,
     trustProxy: true,
   });
+  const terminalBroker = new TerminalBroker();
 
   await app.register(cors, {
     origin: env.webOrigin,
@@ -55,7 +58,11 @@ export async function buildApp(env: ServerEnv) {
   }, { prefix: `${env.appBasePath}/api/servers` });
 
   await app.register(async (instance) => {
-    await registerAgentRoutes(instance, env);
+    await registerTerminalRoutes(instance, terminalBroker);
+  }, { prefix: `${env.appBasePath}/api/terminals` });
+
+  await app.register(async (instance) => {
+    await registerAgentRoutes(instance, env, terminalBroker);
   }, { prefix: `${env.appBasePath}/api/agent` });
 
   return app;

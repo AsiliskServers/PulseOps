@@ -1502,7 +1502,7 @@ pre {
 
 .table-head {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 88px 160px;
+  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 104px 160px;
   gap: 12px;
   padding: 0 16px 8px;
   font-size: 11px;
@@ -1530,7 +1530,12 @@ pre {
 
 .table-head-label {
   display: inline-flex;
-  align-items: end;
+  align-items: center;
+}
+
+.table-head-label-center {
+  justify-content: center;
+  text-align: center;
 }
 
 .table-sort-button small {
@@ -1552,7 +1557,7 @@ pre {
 
 .table-row {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 88px 160px;
+  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 104px 160px;
   gap: 12px;
   align-items: center;
   transition:
@@ -1582,13 +1587,14 @@ pre {
 
 .table-ssh {
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
 .ssh-launch-button {
   min-width: 0;
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -1596,8 +1602,8 @@ pre {
 }
 
 .ssh-launch-button svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .bulk-toolbar {
@@ -1822,6 +1828,96 @@ pre {
 
 .terminal-output.muted {
   color: #94a9bb;
+}
+
+.agent-terminal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(7, 16, 24, 0.58);
+  backdrop-filter: blur(10px);
+}
+
+.agent-terminal-panel {
+  width: min(1320px, 100%);
+  height: 100%;
+  max-height: calc(100vh - 48px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 26px;
+  border: 1px solid rgba(123, 146, 168, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    #08131d;
+  box-shadow:
+    0 26px 80px rgba(3, 11, 18, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.agent-terminal-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.agent-terminal-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agent-terminal-heading h3 {
+  margin: 0;
+  color: #f3f8fc;
+  font-size: 28px;
+}
+
+.agent-terminal-topbar .page-copy {
+  color: rgba(216, 229, 242, 0.72);
+}
+
+.agent-terminal-surface {
+  min-height: 0;
+  border-radius: 20px;
+  border: 1px solid rgba(123, 146, 168, 0.22);
+  background:
+    radial-gradient(circle at top, rgba(125, 211, 252, 0.08), transparent 34%),
+    #0a1520;
+  overflow: hidden;
+}
+
+.agent-terminal-canvas {
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+}
+
+.agent-terminal-canvas .xterm {
+  height: 100%;
+}
+
+.agent-terminal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  color: rgba(216, 229, 242, 0.68);
+  font-size: 12px;
+}
+
+.agent-terminal-footer strong {
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  color: rgba(216, 229, 242, 0.9);
+  word-break: break-all;
 }
 
 .live-indicator,

@@ -53,6 +53,43 @@ type JobResultRequest struct {
 	ErrorMessage  string    `json:"errorMessage,omitempty"`
 }
 
+type TerminalResize struct {
+	Cols int `json:"cols"`
+	Rows int `json:"rows"`
+}
+
+type TerminalAction struct {
+	SessionID string          `json:"sessionId"`
+	Open      bool            `json:"open"`
+	Close     bool            `json:"close"`
+	Input     string          `json:"input,omitempty"`
+	Resize    *TerminalResize `json:"resize,omitempty"`
+	Shell     string          `json:"shell"`
+	Cwd       string          `json:"cwd"`
+}
+
+type TerminalOutput struct {
+	SessionID string `json:"sessionId"`
+	Data      string `json:"data"`
+}
+
+type TerminalClosed struct {
+	SessionID string `json:"sessionId"`
+	Reason    string `json:"reason,omitempty"`
+}
+
+type TerminalSyncRequest struct {
+	AgentID     string           `json:"agentId"`
+	AgentSecret string           `json:"agentSecret"`
+	Opened      []string         `json:"opened,omitempty"`
+	Outputs     []TerminalOutput `json:"outputs,omitempty"`
+	Closed      []TerminalClosed `json:"closed,omitempty"`
+}
+
+type TerminalSyncResponse struct {
+	Sessions []TerminalAction `json:"sessions"`
+}
+
 func NewClient(baseURL string) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
@@ -121,6 +158,27 @@ func (client *Client) SendJobResult(
 	}
 
 	return client.doJSON(ctx, http.MethodPost, "/api/agent/jobs/"+jobID+"/result", body, nil)
+}
+
+func (client *Client) SyncTerminals(
+	ctx context.Context,
+	agentID string,
+	agentSecret string,
+	payload TerminalSyncRequest,
+) ([]TerminalAction, error) {
+	var response TerminalSyncResponse
+	err := client.doJSON(ctx, http.MethodPost, "/api/agent/terminals/sync", map[string]any{
+		"agentId":     agentID,
+		"agentSecret": agentSecret,
+		"opened":      payload.Opened,
+		"outputs":     payload.Outputs,
+		"closed":      payload.Closed,
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Sessions, nil
 }
 
 func (client *Client) doJSON(
