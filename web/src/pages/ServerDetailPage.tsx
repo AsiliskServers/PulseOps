@@ -31,7 +31,7 @@ function getLiveCommand(job: Job): string {
   }
 
   if (job.type === "upgrade") {
-    return "apt-get update && apt-get upgrade -y";
+    return "apt-get update && apt upgrade -y";
   }
 
   return "apt-get update && apt list --upgradable";

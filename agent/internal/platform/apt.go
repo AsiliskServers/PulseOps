@@ -58,7 +58,7 @@ func RunUpgrade(allowUpgrade bool) (Summary, error) {
 		return Summary{}, err
 	}
 
-	_, err = runCommand("apt-get", "upgrade", "-y")
+	_, err = runCommand("apt", "upgrade", "-y")
 	if err != nil {
 		return Summary{}, err
 	}
