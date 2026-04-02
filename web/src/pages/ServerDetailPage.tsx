@@ -216,7 +216,9 @@ export function ServerDetailPage() {
   const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
   const terminalOpen = searchParams.get("terminal") === "1";
   const canOpenTerminal = Boolean(server?.agentId && server.isActive);
-  const sshCommand = canOpenTerminal ? "Ouvrir le terminal root via l'agent" : null;
+  const sshCommand = canOpenTerminal
+    ? "Ouvrir le terminal root via l'agent"
+    : "Aucun agent actif n'est disponible pour ce serveur";
   const hasHistory = Boolean(server?.latestSnapshot) || (server?.recentJobs.length ?? 0) > 0;
   const notesDirty = notesDraft !== (server?.notes ?? "");
   const agentUpdateLive = liveJob?.type === "agent_update";
@@ -369,8 +371,10 @@ export function ServerDetailPage() {
         </article>
       </section>
 
-      <section className="detail-layout">
-        <div className="detail-primary">
+      <section className={`detail-stage ${terminalOpen ? "terminal-active" : ""}`}>
+        <div className="detail-stage-content">
+          <section className="detail-layout">
+            <div className="detail-primary">
           <section className="panel">
             <div className="panel-header">
               <div>
@@ -557,7 +561,7 @@ export function ServerDetailPage() {
           </section>
         </div>
 
-        <aside className="detail-secondary">
+            <aside className="detail-secondary">
           <section className="panel">
             <div className="panel-header">
               <div>
@@ -628,7 +632,21 @@ export function ServerDetailPage() {
               </div>
             </form>
           </section>
-        </aside>
+            </aside>
+          </section>
+        </div>
+
+        <div className="detail-stage-terminal">
+          {terminalOpen ? (
+            <Suspense fallback={null}>
+              <AgentTerminal
+                serverId={server.id}
+                serverName={server.name}
+                onClose={() => setTerminalState(false)}
+              />
+            </Suspense>
+          ) : null}
+        </div>
       </section>
 
       <ServerFormModal
@@ -639,15 +657,6 @@ export function ServerDetailPage() {
         onSubmit={(payload) => updateMutation.mutate(payload)}
       />
 
-      {terminalOpen ? (
-        <Suspense fallback={null}>
-          <AgentTerminal
-            serverId={server.id}
-            serverName={server.name}
-            onClose={() => setTerminalState(false)}
-          />
-        </Suspense>
-      ) : null}
     </div>
   );
 }

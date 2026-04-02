@@ -51,11 +51,11 @@ function getStatusLabel(status: TerminalSessionStatus | "connecting" | "error") 
   }
 
   if (status === "connected") {
-    return "Connecté";
+    return "Connecte";
   }
 
   if (status === "closed") {
-    return "Fermé";
+    return "Ferme";
   }
 
   return "Erreur";
@@ -71,6 +71,14 @@ function getStatusTone(status: TerminalSessionStatus | "connecting" | "error") {
   }
 
   return "critical";
+}
+
+function resolveTerminalErrorMessage(message: string) {
+  if (message.includes("/api/terminals/sessions") && message.includes("not found")) {
+    return "Le terminal agent n'est pas encore deploye sur cette instance. Mets a jour le serveur principal puis les agents.";
+  }
+
+  return message;
 }
 
 export function AgentTerminal({ serverId, serverName, onClose }: Props) {
@@ -130,7 +138,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
         await sendTerminalInput(sessionId, data);
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "Impossible d'envoyer la commande";
-        setError(message);
+        setError(resolveTerminalErrorMessage(message));
       }
     };
 
@@ -228,7 +236,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
         }
 
         setStatus("error");
-        setError("Le flux terminal a été interrompu.");
+        setError("Le flux terminal a ete interrompu.");
       };
     };
 
@@ -260,7 +268,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "Impossible d'ouvrir le terminal";
         setStatus("error");
-        setError(message);
+        setError(resolveTerminalErrorMessage(message));
       }
     })();
 
@@ -322,15 +330,15 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
           void sendTerminalInput(sessionId, pending).catch((cause) => {
             const message =
               cause instanceof Error ? cause.message : "Impossible de coller dans le terminal";
-            setError(message);
+            setError(resolveTerminalErrorMessage(message));
           });
         }, 20);
       }
       terminalRef.current?.focus();
     } catch (cause) {
       const message =
-        cause instanceof Error ? cause.message : "Impossible d'accéder au presse-papiers";
-      setError(message);
+        cause instanceof Error ? cause.message : "Impossible d'acceder au presse-papiers";
+      setError(resolveTerminalErrorMessage(message));
     }
   }
 
@@ -347,44 +355,40 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
   }
 
   return (
-    <div className="agent-terminal-overlay">
-      <section className="agent-terminal-panel">
-        <header className="agent-terminal-topbar">
-          <div>
-            <p className="section-kicker">Terminal agent</p>
-            <div className="agent-terminal-heading">
-              <h3>{serverName}</h3>
-              <span className={`status-pill ${getStatusTone(status)}`}>{getStatusLabel(status)}</span>
-            </div>
-            <p className="page-copy">
-              Shell root proxifié via l&apos;agent installé sur le serveur cible.
-            </p>
+    <section className="agent-terminal-shell panel">
+      <header className="agent-terminal-topbar">
+        <div>
+          <p className="section-kicker">Terminal agent</p>
+          <div className="agent-terminal-heading">
+            <h3>{serverName}</h3>
+            <span className={`status-pill ${getStatusTone(status)}`}>{getStatusLabel(status)}</span>
           </div>
-
-          <div className="inline-actions">
-            <button className="ghost-button small" type="button" onClick={() => void handleCopy()}>
-              Copier
-            </button>
-            <button className="ghost-button small" type="button" onClick={() => void handlePaste()}>
-              Coller
-            </button>
-            <button className="primary-button" type="button" onClick={() => void handleClose()}>
-              Fermer
-            </button>
-          </div>
-        </header>
-
-        {error ? <div className="alert error">{error}</div> : null}
-
-        <div className="agent-terminal-surface">
-          <div ref={canvasRef} className="agent-terminal-canvas" />
+          <p className="page-copy">Shell root proxifie via l&apos;agent installe sur le serveur cible.</p>
         </div>
 
-        <footer className="agent-terminal-footer">
-          <span>Sélection de texte active. Le terminal accepte aussi le collage clavier natif.</span>
-          <strong>{sessionRef.current?.sessionId ?? "Session en préparation"}</strong>
-        </footer>
-      </section>
-    </div>
+        <div className="inline-actions">
+          <button className="ghost-button small" type="button" onClick={() => void handleCopy()}>
+            Copier
+          </button>
+          <button className="ghost-button small" type="button" onClick={() => void handlePaste()}>
+            Coller
+          </button>
+          <button className="primary-button" type="button" onClick={() => void handleClose()}>
+            Fermer
+          </button>
+        </div>
+      </header>
+
+      {error ? <div className="alert error">{error}</div> : null}
+
+      <div className="agent-terminal-surface">
+        <div ref={canvasRef} className="agent-terminal-canvas" />
+      </div>
+
+      <footer className="agent-terminal-footer">
+        <span>Selection de texte active. Le terminal accepte aussi le collage clavier natif.</span>
+        <strong>{sessionRef.current?.sessionId ?? "Session en preparation"}</strong>
+      </footer>
+    </section>
   );
 }
