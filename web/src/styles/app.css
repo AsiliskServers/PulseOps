@@ -1165,6 +1165,7 @@ pre {
 .tv-priority-list {
   display: grid;
   gap: 8px;
+  align-content: start;
 }
 
 .tv-priority-row {
@@ -1246,6 +1247,39 @@ pre {
 .tv-server-card.wall-critical {
   border-color: rgba(170, 67, 89, 0.24);
   background: linear-gradient(180deg, rgba(249, 232, 236, 0.98) 0%, rgba(255, 248, 250, 0.94) 100%);
+}
+
+.tv-server-card.wall-summary {
+  place-items: center;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(239, 244, 248, 0.98) 0%, rgba(250, 252, 253, 0.94) 100%);
+}
+
+.tv-server-summary {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+}
+
+.tv-server-summary span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tv-server-summary strong {
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #0f2740;
+}
+
+.tv-server-summary p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .tv-server-card-head {

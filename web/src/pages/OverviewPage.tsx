@@ -352,12 +352,16 @@ export function OverviewPage() {
         left.name.localeCompare(right.name, "fr")
     )
     .slice(0, 6);
-  const livePriorityServers = highlightedServers.filter((server) => resolveTvSignal(server).tone !== "ok");
+  const livePriorityServers = highlightedServers
+    .filter((server) => resolveTvSignal(server).tone !== "ok")
+    .slice(0, 4);
   const tvWallServers = [...servers].sort(
     (left, right) =>
       getServerPriorityScore(right) - getServerPriorityScore(left) ||
       left.name.localeCompare(right.name, "fr")
   );
+  const tvWallVisibleServers = tvWallServers.slice(0, 15);
+  const tvWallRemainingCount = Math.max(0, tvWallServers.length - tvWallVisibleServers.length);
   const monitoringSlices = buildMonitoringSlices(servers);
   const monitoredCount = monitoringSlices.reduce((total, slice) => total + slice.count, 0);
   const activeMonitoringSlices = monitoringSlices.filter((slice) => slice.count > 0);
@@ -707,51 +711,63 @@ export function OverviewPage() {
               {tvWallServers.length === 0 ? (
                 <div className="empty-state">Aucun serveur à afficher.</div>
               ) : (
-                tvWallServers.map((server) => {
-                  const state = resolveServerState(server);
-                  const signal = resolveTvSignal(server);
-                  const wallAccent = resolveTvWallAccent(state.label);
+                <>
+                  {tvWallVisibleServers.map((server) => {
+                    const state = resolveServerState(server);
+                    const signal = resolveTvSignal(server);
+                    const wallAccent = resolveTvWallAccent(state.label);
 
-                  return (
-                    <article key={server.id} className={`tv-server-card wall-${wallAccent}`}>
-                      <div className="tv-server-card-head">
-                        <div className="tv-server-name">
-                          <strong>{server.name}</strong>
-                          <p>{server.hostname ?? "Hostname inconnu"}</p>
+                    return (
+                      <article key={server.id} className={`tv-server-card wall-${wallAccent}`}>
+                        <div className="tv-server-card-head">
+                          <div className="tv-server-name">
+                            <strong>{server.name}</strong>
+                            <p>{server.hostname ?? "Hostname inconnu"}</p>
+                          </div>
+                          <div className={`tv-server-live is-${signal.tone}`}>
+                            <span className="tv-server-live-dot" aria-hidden="true" />
+                            {signal.label}
+                          </div>
                         </div>
-                        <div className={`tv-server-live is-${signal.tone}`}>
-                          <span className="tv-server-live-dot" aria-hidden="true" />
-                          {signal.label}
-                        </div>
-                      </div>
 
-                      <div className="tv-server-badges">
-                        <span className={`server-badge ${state.tone}`}>{state.label}</span>
-                        <span className="status-pill neutral">{server.environment}</span>
-                      </div>
+                        <div className="tv-server-badges">
+                          <span className={`server-badge ${state.tone}`}>{state.label}</span>
+                          <span className="status-pill neutral">{server.environment}</span>
+                        </div>
 
-                      <div className="tv-server-metrics">
-                        <div>
-                          <span>Updates</span>
-                          <strong>{server.latestSnapshot?.upgradableCount ?? 0}</strong>
+                        <div className="tv-server-metrics">
+                          <div>
+                            <span>Updates</span>
+                            <strong>{server.latestSnapshot?.upgradableCount ?? 0}</strong>
+                          </div>
+                          <div>
+                            <span>Sécurité</span>
+                            <strong>{server.latestSnapshot?.securityCount ?? 0}</strong>
+                          </div>
+                          <div>
+                            <span>Jobs</span>
+                            <strong>{server.pendingJobsCount}</strong>
+                          </div>
                         </div>
-                        <div>
-                          <span>Sécurité</span>
-                          <strong>{server.latestSnapshot?.securityCount ?? 0}</strong>
-                        </div>
-                        <div>
-                          <span>Jobs</span>
-                          <strong>{server.pendingJobsCount}</strong>
-                        </div>
-                      </div>
 
-                      <div className="tv-server-meta">
-                        <span>{server.connectivityStatus}</span>
-                        <span>{formatDate(server.lastSeenAt ?? server.lastReportAt)}</span>
+                        <div className="tv-server-meta">
+                          <span>{server.connectivityStatus}</span>
+                          <span>{formatDate(server.lastSeenAt ?? server.lastReportAt)}</span>
+                        </div>
+                      </article>
+                    );
+                  })}
+
+                  {tvWallRemainingCount > 0 ? (
+                    <article className="tv-server-card wall-summary">
+                      <div className="tv-server-summary">
+                        <span>Parc étendu</span>
+                        <strong>+ {tvWallRemainingCount}</strong>
+                        <p>serveur{tvWallRemainingCount > 1 ? "s" : ""} non affiché{tvWallRemainingCount > 1 ? "s" : ""}</p>
                       </div>
                     </article>
-                  );
-                })
+                  ) : null}
+                </>
               )}
             </div>
           </section>

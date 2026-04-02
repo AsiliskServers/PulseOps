@@ -31,10 +31,10 @@ function getLiveCommand(job: Job): string {
   }
 
   if (job.type === "upgrade") {
-    return "apt-get update && apt upgrade -y";
+    return "apt update && apt upgrade -y";
   }
 
-  return "apt-get update && apt list --upgradable";
+  return "apt update && apt list --upgradable";
 }
 
 function getLiveMessage(job: Job): string {
