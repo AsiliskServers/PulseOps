@@ -7,6 +7,27 @@ import { generateOpaqueToken } from "../lib/tokens.js";
 import { getEnrollmentToken } from "../services/settings.js";
 import { TerminalBroker } from "../services/terminal-broker.js";
 
+type AuthenticatedAgentServer = {
+  id: string;
+  agentId: string | null;
+  agentSecretEncrypted: string | null;
+  hostname: string | null;
+  sshHost: string | null;
+  osName: string | null;
+  osVersion: string | null;
+  agentVersion: string | null;
+  isActive: boolean;
+};
+
+const AGENT_AUTH_CACHE_TTL_MS = 15_000;
+const agentAuthCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    server: AuthenticatedAgentServer;
+  }
+>();
+
 function normalizeDate(value: string | undefined): Date | null {
   if (!value) {
     return null;
@@ -23,9 +44,30 @@ async function authenticateAgent(body: unknown, env: ServerEnv) {
 
   const agentId = readRequiredString(body, "agentId", "agentId");
   const agentSecret = readRequiredString(body, "agentSecret", "agentSecret");
+  const cacheKey = `${agentId}:${agentSecret}`;
+  const cached = agentAuthCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now() && cached.server.isActive) {
+    return {
+      body,
+      server: cached.server,
+    };
+  }
+
   const server = await prisma.server.findFirst({
     where: {
       agentId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      agentId: true,
+      agentSecretEncrypted: true,
+      hostname: true,
+      sshHost: true,
+      osName: true,
+      osVersion: true,
+      agentVersion: true,
       isActive: true,
     },
   });
@@ -40,10 +82,37 @@ async function authenticateAgent(body: unknown, env: ServerEnv) {
     throw new Error("Invalid agent credentials");
   }
 
+  agentAuthCache.set(cacheKey, {
+    expiresAt: Date.now() + AGENT_AUTH_CACHE_TTL_MS,
+    server,
+  });
+
   return {
     body,
     server,
   };
+}
+
+async function touchServerLastSeen(
+  client: typeof prisma,
+  serverId: string,
+  now: Date,
+  minimumIntervalMs: number
+) {
+  const threshold = new Date(now.getTime() - minimumIntervalMs);
+
+  await client.server.updateMany({
+    where: {
+      id: serverId,
+      OR: [
+        { lastSeenAt: null },
+        { lastSeenAt: { lt: threshold } },
+      ],
+    },
+    data: {
+      lastSeenAt: now,
+    },
+  });
 }
 
 export async function registerAgentRoutes(
@@ -167,14 +236,7 @@ export async function registerAgentRoutes(
       const now = new Date();
 
       const job = await prisma.$transaction(async (tx) => {
-        await tx.server.update({
-          where: {
-            id: server.id,
-          },
-          data: {
-            lastSeenAt: now,
-          },
-        });
+        await touchServerLastSeen(tx as typeof prisma, server.id, now, 30_000);
 
         const nextJob = await tx.job.findFirst({
           where: {
@@ -256,28 +318,18 @@ export async function registerAgentRoutes(
       const outputPreview = readOptionalString(body, "outputPreview") ?? null;
       const errorMessage = readOptionalString(body, "errorMessage") ?? null;
 
-      await prisma.$transaction([
-        prisma.server.update({
-          where: {
-            id: server.id,
-          },
-          data: {
-            lastSeenAt: new Date(),
-          },
-        }),
-        prisma.job.update({
-          where: {
-            id: job.id,
-          },
-          data: {
-            status,
-            startedAt,
-            finishedAt,
-            outputPreview: outputPreview ?? job.outputPreview,
-            errorMessage: status === "running" ? null : errorMessage,
-          },
-        }),
-      ]);
+      await prisma.job.update({
+        where: {
+          id: job.id,
+        },
+        data: {
+          status,
+          startedAt,
+          finishedAt,
+          outputPreview: outputPreview ?? job.outputPreview,
+          errorMessage: status === "running" ? null : errorMessage,
+        },
+      });
 
       return reply.send({ ok: true });
     } catch (error) {
@@ -330,15 +382,6 @@ export async function registerAgentRoutes(
         opened,
         outputs,
         closed,
-      });
-
-      await prisma.server.update({
-        where: {
-          id: server.id,
-        },
-        data: {
-          lastSeenAt: new Date(),
-        },
       });
 
       return reply.send(response);

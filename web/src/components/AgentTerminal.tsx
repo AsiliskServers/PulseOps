@@ -105,6 +105,8 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
   const streamRef = useRef<EventSource | null>(null);
   const flushTimerRef = useRef<number | null>(null);
   const resizeTimerRef = useRef<number | null>(null);
+  const sendingInputRef = useRef(false);
+  const lastSentSizeRef = useRef<string | null>(null);
   const inputBufferRef = useRef("");
   const destroyedRef = useRef(false);
   const closingRef = useRef(false);
@@ -141,7 +143,21 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       terminal.writeln("[PulseOps] Attente de l'agent...");
     }
 
+    const scheduleFlush = (delay: number) => {
+      if (flushTimerRef.current !== null) {
+        return;
+      }
+
+      flushTimerRef.current = window.setTimeout(() => {
+        void flushInput();
+      }, delay);
+    };
+
     const flushInput = async () => {
+      if (sendingInputRef.current) {
+        return;
+      }
+
       flushTimerRef.current = null;
       const data = inputBufferRef.current;
       const sessionId = sessionRef.current?.sessionId;
@@ -151,25 +167,35 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       }
 
       inputBufferRef.current = "";
+      sendingInputRef.current = true;
 
       try {
         await sendTerminalInput(sessionId, data);
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "Impossible d'envoyer la commande";
         setError(resolveTerminalErrorMessage(message));
+      } finally {
+        sendingInputRef.current = false;
+        if (inputBufferRef.current.length > 0) {
+          scheduleFlush(0);
+        }
       }
     };
 
     const queueInput = (data: string) => {
       inputBufferRef.current += data;
 
-      if (flushTimerRef.current !== null) {
+      if (data.includes("\r") || data.includes("\n") || data.includes("\u0003")) {
+        if (flushTimerRef.current !== null) {
+          window.clearTimeout(flushTimerRef.current);
+          flushTimerRef.current = null;
+        }
+
+        void flushInput();
         return;
       }
 
-      flushTimerRef.current = window.setTimeout(() => {
-        void flushInput();
-      }, 8);
+      scheduleFlush(4);
     };
 
     terminal.onData((data) => {
@@ -194,12 +220,19 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
           cols: terminal.cols,
           rows: terminal.rows,
         });
+        const sizeKey = `${size.cols}x${size.rows}`;
+
+        if (lastSentSizeRef.current === sizeKey) {
+          return;
+        }
+
+        lastSentSizeRef.current = sizeKey;
 
         void resizeTerminalSession(sessionId, size).catch((cause) => {
           const message = cause instanceof Error ? cause.message : "Impossible de redimensionner le terminal";
           setError(resolveTerminalErrorMessage(message));
         });
-      }, 80);
+      }, 40);
     });
 
     if (surfaceRef.current) {
@@ -365,7 +398,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
               cause instanceof Error ? cause.message : "Impossible de coller dans le terminal";
             setError(resolveTerminalErrorMessage(message));
           });
-        }, 8);
+        }, 4);
       }
       terminalRef.current?.focus();
     } catch (cause) {

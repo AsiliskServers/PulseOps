@@ -124,7 +124,7 @@ export async function registerTerminalRoutes(
 
       const data = rawData;
       broker.enqueueInput(sessionId, user.id, data);
-      return reply.status(202).send({ ok: true });
+      return reply.status(204).send();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to send terminal input";
       const statusCode = message === "Terminal session not found" ? 404 : 400;
@@ -154,7 +154,7 @@ export async function registerTerminalRoutes(
       }
 
       broker.updateResize(sessionId, user.id, { cols, rows });
-      return reply.status(202).send({ ok: true });
+      return reply.status(204).send();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to resize terminal";
       const statusCode = message === "Terminal session not found" ? 404 : 400;
@@ -173,7 +173,7 @@ export async function registerTerminalRoutes(
 
     try {
       broker.closeForUser(sessionId, user.id);
-      return reply.status(202).send({ ok: true });
+      return reply.status(204).send();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to close terminal session";
       const statusCode = message === "Terminal session not found" ? 404 : 400;

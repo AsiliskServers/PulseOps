@@ -23,8 +23,10 @@ import (
 var version = "dev"
 
 const (
-	terminalSyncIdleInterval   = 250 * time.Millisecond
-	terminalSyncActiveInterval = 75 * time.Millisecond
+	terminalSyncIdleInterval   = 150 * time.Millisecond
+	terminalSyncActiveInterval = 45 * time.Millisecond
+	terminalSyncBurstInterval  = 24 * time.Millisecond
+	terminalSyncBurstWindow    = 1500 * time.Millisecond
 )
 
 func main() {
@@ -186,6 +188,7 @@ func runService(args []string) error {
 	defer updateTicker.Stop()
 	terminalTimer := time.NewTimer(terminalSyncIdleInterval)
 	defer terminalTimer.Stop()
+	terminalBurstUntil := time.Time{}
 
 	reportOnce := func() error {
 		summary, err := platform.RunRefresh()
@@ -282,13 +285,21 @@ func runService(args []string) error {
 			return err
 		}
 
+		if len(updates.Opened) > 0 || len(updates.Outputs) > 0 || len(updates.Closed) > 0 || len(actions) > 0 {
+			terminalBurstUntil = time.Now().Add(terminalSyncBurstWindow)
+		}
+
 		return shellManager.Apply(actions)
 	}
 
 	resetTerminalTimer := func() {
 		interval := terminalSyncIdleInterval
 		if shellManager.HasActiveSessions() {
+			if time.Now().Before(terminalBurstUntil) {
+				interval = terminalSyncBurstInterval
+			} else {
 			interval = terminalSyncActiveInterval
+			}
 		}
 
 		if !terminalTimer.Stop() {

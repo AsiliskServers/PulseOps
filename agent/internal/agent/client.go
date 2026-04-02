@@ -94,6 +94,13 @@ func NewClient(baseURL string) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		httpClient: &http.Client{
+			Transport: &http.Transport{
+				MaxIdleConns:        64,
+				MaxIdleConnsPerHost: 16,
+				MaxConnsPerHost:     32,
+				IdleConnTimeout:     90 * time.Second,
+				ForceAttemptHTTP2:   true,
+			},
 			Timeout: 2 * time.Minute,
 		},
 	}
