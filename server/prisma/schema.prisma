@@ -32,6 +32,8 @@ model Server {
   agentId              String?          @unique
   agentSecretEncrypted String?
   hostname             String?
+  sshHost              String?
+  sshPort              Int              @default(22)
   osName               String?
   osVersion            String?
   agentVersion         String?

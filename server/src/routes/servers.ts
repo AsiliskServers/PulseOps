@@ -5,6 +5,7 @@ import { requireSessionUser } from "../lib/session.js";
 import {
   isRecord,
   readOptionalBoolean,
+  readOptionalInteger,
   readOptionalString,
   readRequiredString,
   validateEnvironment,
@@ -31,6 +32,8 @@ function parseCreatePayload(body: unknown) {
     environment: validateEnvironment(readRequiredString(body, "environment", "environment")),
     notes: readOptionalString(body, "notes"),
     isActive: readOptionalBoolean(body, "isActive") ?? true,
+    sshHost: readOptionalString(body, "sshHost"),
+    sshPort: readOptionalInteger(body, "sshPort", { min: 1, max: 65535 }) ?? 22,
   };
 }
 
@@ -47,6 +50,9 @@ function parseUpdatePayload(body: unknown) {
     notes:
       typeof body.notes === "string" ? body.notes.trim() || null : undefined,
     isActive: readOptionalBoolean(body, "isActive"),
+    sshHost:
+      typeof body.sshHost === "string" ? body.sshHost.trim() || null : undefined,
+    sshPort: readOptionalInteger(body, "sshPort", { min: 1, max: 65535 }),
   };
 }
 
@@ -179,6 +185,8 @@ export async function registerServerRoutes(
             environment: payload.environment,
             notes: payload.notes,
             isActive: payload.isActive,
+            sshHost: payload.sshHost,
+            sshPort: payload.sshPort,
           },
           include: serverListInclude,
         }),
@@ -297,6 +305,8 @@ export async function registerServerRoutes(
             environment: payload.environment,
             notes: payload.notes,
             isActive: payload.isActive,
+            sshHost: payload.sshHost,
+            sshPort: payload.sshPort,
           },
           include: serverListInclude,
         }),

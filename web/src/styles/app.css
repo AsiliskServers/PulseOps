@@ -449,6 +449,14 @@ pre {
   gap: 6px;
 }
 
+.page-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .page-heading h2 {
   font-size: clamp(24px, 3vw, 30px);
   line-height: 1.08;
@@ -1494,7 +1502,7 @@ pre {
 
 .table-head {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 160px;
+  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 88px 160px;
   gap: 12px;
   padding: 0 16px 8px;
   font-size: 11px;
@@ -1520,6 +1528,11 @@ pre {
   text-transform: inherit;
 }
 
+.table-head-label {
+  display: inline-flex;
+  align-items: end;
+}
+
 .table-sort-button small {
   font-size: 10px;
   font-weight: 700;
@@ -1539,7 +1552,7 @@ pre {
 
 .table-row {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 160px;
+  grid-template-columns: 38px minmax(0, 1.2fr) 150px 170px 140px 88px 160px;
   gap: 12px;
   align-items: center;
   transition:
@@ -1565,6 +1578,15 @@ pre {
 
 .table-name-link:hover strong {
   text-decoration: underline;
+}
+
+.table-ssh {
+  display: flex;
+  justify-content: center;
+}
+
+.ssh-launch-button {
+  min-width: 0;
 }
 
 .bulk-toolbar {
@@ -2010,6 +2032,219 @@ pre {
 
   .detail-layout {
     grid-template-columns: minmax(0, 1.4fr) 380px;
+  }
+}
+
+@media (max-width: 1680px) and (min-width: 1281px) {
+  .page-column {
+    gap: 16px;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .page-header {
+    padding: 20px;
+  }
+
+  .hero-stat,
+  .stat-card,
+  .mini-summary,
+  .detail-field {
+    padding: 14px;
+  }
+
+  .hero-stat strong,
+  .stat-card strong,
+  .mini-summary strong,
+  .detail-field strong {
+    font-size: 18px;
+  }
+
+  .overview-cards {
+    gap: 12px;
+  }
+
+  .overview-grid {
+    grid-template-columns: minmax(0, 1.12fr) minmax(470px, 0.94fr);
+    gap: 16px;
+  }
+
+  .overview-row,
+  .table-row,
+  .job-row {
+    padding: 14px;
+  }
+
+  .monitoring-constellation {
+    grid-template-columns: 212px 292px 212px;
+    column-gap: 48px;
+    row-gap: 18px;
+    min-height: 392px;
+  }
+
+  .monitoring-hub {
+    min-height: 318px;
+    padding: 22px 18px;
+    gap: 16px;
+  }
+
+  .monitoring-hub-copy strong {
+    font-size: 37px;
+  }
+
+  .monitoring-server-beacon {
+    width: 84px;
+    height: 84px;
+  }
+
+  .monitoring-server-stack {
+    width: 142px;
+  }
+
+  .monitoring-server-unit {
+    height: 40px;
+  }
+
+  .monitoring-callout {
+    width: min(218px, 100%);
+    padding: 12px 13px;
+    gap: 10px;
+  }
+
+  .monitoring-copy p {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .monitoring-value strong {
+    font-size: 17px;
+  }
+}
+
+@media (max-height: 1100px) and (min-width: 1281px) {
+  .app-main {
+    padding: 22px 24px 26px;
+  }
+
+  .page-column {
+    gap: 14px;
+  }
+
+  .page-header {
+    padding: 18px;
+  }
+
+  .page-heading h2 {
+    font-size: 26px;
+  }
+
+  .page-copy {
+    margin-top: 6px;
+    font-size: 13px;
+  }
+
+  .hero-stat,
+  .stat-card,
+  .mini-summary,
+  .detail-field {
+    padding: 12px;
+  }
+
+  .hero-stat strong,
+  .stat-card strong,
+  .mini-summary strong,
+  .detail-field strong {
+    margin-top: 6px;
+    font-size: 17px;
+  }
+
+  .overview-cards {
+    gap: 10px;
+  }
+
+  .overview-grid {
+    gap: 14px;
+  }
+
+  .panel-header,
+  .modal-header {
+    margin-bottom: 12px;
+  }
+
+  .overview-row,
+  .table-row,
+  .job-row {
+    padding: 12px 13px;
+  }
+
+  .overview-row strong,
+  .table-row strong,
+  .job-row strong {
+    font-size: 13px;
+  }
+
+  .monitoring-constellation {
+    grid-template-columns: 204px 276px 204px;
+    column-gap: 42px;
+    row-gap: 16px;
+    min-height: 364px;
+  }
+
+  .monitoring-hub {
+    min-height: 300px;
+    padding: 18px 16px;
+    gap: 14px;
+  }
+
+  .monitoring-hub-copy strong {
+    font-size: 34px;
+  }
+
+  .monitoring-hub-meta {
+    gap: 8px;
+  }
+
+  .monitoring-hub-stat {
+    padding: 10px 12px;
+  }
+
+  .monitoring-hub-stat strong {
+    font-size: 16px;
+    margin-top: 5px;
+  }
+
+  .monitoring-server-beacon {
+    width: 76px;
+    height: 76px;
+  }
+
+  .monitoring-server-stack {
+    width: 132px;
+  }
+
+  .monitoring-server-unit {
+    height: 37px;
+  }
+
+  .monitoring-callout {
+    width: min(208px, 100%);
+    padding: 11px 12px;
+    gap: 9px;
+  }
+
+  .monitoring-copy-top strong {
+    font-size: 12px;
+  }
+
+  .monitoring-copy p {
+    font-size: 11px;
+    line-height: 1.34;
+  }
+
+  .monitoring-value strong {
+    font-size: 16px;
   }
 }
 

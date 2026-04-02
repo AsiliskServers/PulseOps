@@ -17,6 +17,7 @@ import {
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
+import { buildSshCommand, launchSsh, resolveSshHost, resolveSshPort } from "../lib/ssh";
 import type { Job, ServerDetail, ServerPayload } from "../types";
 
 const liveStatuses = new Set(["queued", "claimed", "running"]);
@@ -189,6 +190,7 @@ export function ServerDetailPage() {
     server?.recentJobs.find(isLiveJob) ??
     (server?.latestJob && isLiveJob(server.latestJob) ? server.latestJob : null);
   const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
+  const sshCommand = server ? buildSshCommand(server) : null;
   const hasHistory = Boolean(server?.latestSnapshot) || (server?.recentJobs.length ?? 0) > 0;
   const notesDirty = notesDraft !== (server?.notes ?? "");
   const agentUpdateLive = liveJob?.type === "agent_update";
@@ -229,7 +231,20 @@ export function ServerDetailPage() {
       <section className="page-header panel">
         <div className="page-heading">
           <p className="section-kicker">Serveur</p>
-          <h2>{server.name}</h2>
+          <div className="page-title-row">
+            <h2>{server.name}</h2>
+            <button
+              className="ghost-button small ssh-launch-button"
+              type="button"
+              onClick={() => {
+                void launchSsh(server);
+              }}
+              disabled={!sshCommand}
+              title={sshCommand ?? "Configurer un hote SSH pour ce serveur"}
+            >
+              SSH root
+            </button>
+          </div>
           <p className="page-copy">
             <Link className="text-link" to="/servers">
               Parc serveurs
@@ -360,6 +375,14 @@ export function ServerDetailPage() {
               <div className="detail-field">
                 <span>Agent ID</span>
                 <strong className="mono-inline">{server.agentId ?? "--"}</strong>
+              </div>
+              <div className="detail-field">
+                <span>SSH</span>
+                <strong>{resolveSshHost(server) ?? "--"}</strong>
+              </div>
+              <div className="detail-field">
+                <span>Port SSH</span>
+                <strong>{resolveSshPort(server)}</strong>
               </div>
               <div className="detail-field">
                 <span>Actif</span>

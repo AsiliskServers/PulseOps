@@ -37,6 +37,39 @@ export function readOptionalBoolean(input: Record<string, unknown>, key: string)
   return typeof value === "boolean" ? value : undefined;
 }
 
+export function readOptionalInteger(
+  input: Record<string, unknown>,
+  key: string,
+  options: { min?: number; max?: number } = {}
+): number | undefined {
+  const value = input[key];
+
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value.trim(), 10)
+        : Number.NaN;
+
+  if (!Number.isInteger(numericValue)) {
+    throw new Error(`${key} must be an integer`);
+  }
+
+  if (options.min !== undefined && numericValue < options.min) {
+    throw new Error(`${key} must be greater than or equal to ${options.min}`);
+  }
+
+  if (options.max !== undefined && numericValue > options.max) {
+    throw new Error(`${key} must be lower than or equal to ${options.max}`);
+  }
+
+  return numericValue;
+}
+
 export function validateEnvironment(value: string): EnvironmentValue {
   if (!ENVIRONMENTS.has(value as EnvironmentValue)) {
     throw new Error("environment must be one of production, staging, internal or other");

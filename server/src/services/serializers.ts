@@ -124,6 +124,8 @@ export function serializeServer(
     isActive: server.isActive,
     agentId: server.agentId,
     hostname: server.hostname,
+    sshHost: server.sshHost,
+    sshPort: server.sshPort,
     osName: server.osName,
     osVersion: server.osVersion,
     agentVersion: server.agentVersion,

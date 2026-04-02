@@ -79,6 +79,8 @@ export async function registerAgentRoutes(
           agentId,
           agentSecretEncrypted: encryptSecret(agentSecret, env.encryptionKey),
           hostname,
+          sshHost: hostname,
+          sshPort: 22,
           osName,
           osVersion,
           agentVersion,
@@ -119,6 +121,7 @@ export async function registerAgentRoutes(
       }
 
       const now = new Date();
+      const reportedHostname = readOptionalString(body, "hostname");
 
       await prisma.$transaction([
         prisma.server.update({
@@ -128,7 +131,8 @@ export async function registerAgentRoutes(
           data: {
             lastSeenAt: now,
             lastReportAt: now,
-            hostname: readOptionalString(body, "hostname") ?? server.hostname,
+            hostname: reportedHostname ?? server.hostname,
+            sshHost: server.sshHost ?? reportedHostname ?? server.sshHost,
             osName: readOptionalString(body, "osName") ?? server.osName,
             osVersion: readOptionalString(body, "osVersion") ?? server.osVersion,
             agentVersion: readOptionalString(body, "agentVersion") ?? server.agentVersion,

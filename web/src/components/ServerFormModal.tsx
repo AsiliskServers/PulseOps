@@ -27,6 +27,8 @@ export function ServerFormModal({
   const [environment, setEnvironment] = useState<ServerPayload["environment"]>("production");
   const [notes, setNotes] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [sshHost, setSshHost] = useState("");
+  const [sshPort, setSshPort] = useState("22");
 
   useEffect(() => {
     if (!open) {
@@ -37,6 +39,8 @@ export function ServerFormModal({
     setEnvironment((initialServer?.environment as ServerPayload["environment"]) ?? "production");
     setNotes(initialServer?.notes ?? "");
     setIsActive(initialServer?.isActive ?? true);
+    setSshHost(initialServer?.sshHost ?? initialServer?.hostname ?? "");
+    setSshPort(String(initialServer?.sshPort ?? 22));
   }, [initialServer, open]);
 
   if (!open) {
@@ -67,11 +71,16 @@ export function ServerFormModal({
           onSubmit={(event) => {
             event.preventDefault();
 
+            const normalizedSshPort =
+              sshPort.trim().length > 0 ? Number.parseInt(sshPort.trim(), 10) : undefined;
+
             onSubmit({
               name,
               environment,
               notes,
               isActive,
+              sshHost: sshHost.trim() || undefined,
+              sshPort: Number.isInteger(normalizedSshPort) ? normalizedSshPort : undefined,
             });
           }}
         >
@@ -94,6 +103,27 @@ export function ServerFormModal({
                 </option>
               ))}
             </select>
+          </label>
+
+          <label>
+            <span>Hote SSH / IP</span>
+            <input
+              value={sshHost}
+              onChange={(event) => setSshHost(event.target.value)}
+              placeholder="Ex: 192.168.2.101 ou srv-prod-01"
+            />
+          </label>
+
+          <label>
+            <span>Port SSH</span>
+            <input
+              type="number"
+              min={1}
+              max={65535}
+              value={sshPort}
+              onChange={(event) => setSshPort(event.target.value)}
+              placeholder="22"
+            />
           </label>
 
           <label>

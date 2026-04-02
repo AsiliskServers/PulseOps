@@ -7,6 +7,7 @@ import {
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
+import { buildSshCommand, launchSsh } from "../lib/ssh";
 
 type BatchAction = "refresh" | "upgrade" | "agent_update";
 type SortField = "name" | "serverState" | "agentState" | "environment" | "lastSeenAt";
@@ -377,6 +378,7 @@ export function ServersPage() {
             <span>Environnement</span>
             <small>{getSortLabel("environment")}</small>
           </button>
+          <span className="table-head-label">SSH</span>
           <button
             className="table-sort-button align-end"
             type="button"
@@ -391,13 +393,16 @@ export function ServersPage() {
           {servers.length === 0 ? (
             <div className="empty-state">Aucun serveur ne correspond à ce filtre.</div>
           ) : (
-            servers.map(({ server, state, agentState }) => (
-              <div
-                key={server.id}
-                className={`table-row selectable-row ${
-                  selectedIds.includes(server.id) ? "selected" : ""
-                }`}
-              >
+            servers.map(({ server, state, agentState }) => {
+              const sshCommand = buildSshCommand(server);
+
+              return (
+                <div
+                  key={server.id}
+                  className={`table-row selectable-row ${
+                    selectedIds.includes(server.id) ? "selected" : ""
+                  }`}
+                >
                 <label className="row-check">
                   <input
                     type="checkbox"
@@ -427,6 +432,20 @@ export function ServersPage() {
                   <span className="server-badge neutral">{server.environment}</span>
                 </div>
 
+                <div className="table-ssh">
+                  <button
+                    className="ghost-button small ssh-launch-button"
+                    type="button"
+                    onClick={() => {
+                      void launchSsh(server);
+                    }}
+                    disabled={!sshCommand}
+                    title={sshCommand ?? "Configurer un hote SSH pour ce serveur"}
+                  >
+                    SSH
+                  </button>
+                </div>
+
                 <div className="table-row-side">
                   <span>{formatDate(server.lastSeenAt)}</span>
                   <small
@@ -438,8 +457,9 @@ export function ServersPage() {
                     <span>{server.pendingJobsCount} jobs</span>
                   </small>
                 </div>
-              </div>
-            ))
+                </div>
+              );
+            })
           )}
         </div>
       </section>

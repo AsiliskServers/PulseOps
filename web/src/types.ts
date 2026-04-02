@@ -48,6 +48,8 @@ export type ServerSummary = {
   isActive: boolean;
   agentId: string | null;
   hostname: string | null;
+  sshHost: string | null;
+  sshPort: number;
   osName: string | null;
   osVersion: string | null;
   agentVersion: string | null;
@@ -72,6 +74,8 @@ export type ServerPayload = {
   environment: "production" | "staging" | "internal" | "other";
   notes?: string;
   isActive?: boolean;
+  sshHost?: string;
+  sshPort?: number;
 };
 
 export type EnrollmentSettings = {
