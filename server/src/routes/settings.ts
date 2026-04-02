@@ -7,6 +7,17 @@ function buildInstallCommand(publicUrl: string, token: string) {
   return `curl -fsSL ${publicUrl}/install-agent.sh | bash -s -- --server-url ${publicUrl} --enrollment-token ${token} --environment production`;
 }
 
+function buildEnrollmentResponse(env: ServerEnv, token: string) {
+  return {
+    enrollmentToken: token,
+    publicUrl: env.appPublicUrl,
+    reportIntervalSeconds: env.agentReportIntervalSeconds,
+    jobPollIntervalSeconds: env.agentJobPollIntervalSeconds,
+    autoUpdateIntervalSeconds: env.agentAutoUpdateIntervalSeconds,
+    installCommand: buildInstallCommand(env.appPublicUrl, token),
+  };
+}
+
 export async function registerSettingsRoutes(
   app: FastifyInstance,
   env: ServerEnv
@@ -20,14 +31,7 @@ export async function registerSettingsRoutes(
 
     const token = await getEnrollmentToken(env);
 
-    return reply.send({
-      enrollmentToken: token,
-      publicUrl: env.appPublicUrl,
-      reportIntervalSeconds: env.agentReportIntervalSeconds,
-      jobPollIntervalSeconds: env.agentJobPollIntervalSeconds,
-      autoUpdateIntervalSeconds: env.agentAutoUpdateIntervalSeconds,
-      installCommand: buildInstallCommand(env.appPublicUrl, token),
-    });
+    return reply.send(buildEnrollmentResponse(env, token));
   });
 
   app.post("/enrollment/rotate", async (request, reply) => {
@@ -39,13 +43,6 @@ export async function registerSettingsRoutes(
 
     const token = await rotateEnrollmentToken(env);
 
-    return reply.send({
-      enrollmentToken: token,
-      publicUrl: env.appPublicUrl,
-      reportIntervalSeconds: env.agentReportIntervalSeconds,
-      jobPollIntervalSeconds: env.agentJobPollIntervalSeconds,
-      autoUpdateIntervalSeconds: env.agentAutoUpdateIntervalSeconds,
-      installCommand: buildInstallCommand(env.appPublicUrl, token),
-    });
+    return reply.send(buildEnrollmentResponse(env, token));
   });
 }

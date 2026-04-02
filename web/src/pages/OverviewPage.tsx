@@ -8,8 +8,6 @@ import {
   getServerPriorityScore,
   resolveMonitoringBucket,
   resolveServerState,
-  resolveTvSignal,
-  resolveTvWallAccent,
 } from "../lib/presentation";
 
 type MonitoringSlice = {
@@ -124,42 +122,6 @@ function buildMonitoringSlices(servers: ServerSummary[]): MonitoringSlice[] {
   }
 
   return monitoringSlices;
-}
-
-function getServerPriorityScore(server: ServerSummary) {
-  if (server.pendingJobsCount > 0) {
-    return 100;
-  }
-
-  if (server.latestJob?.status === "failed") {
-    return 95;
-  }
-
-  if (server.connectivityStatus === "offline") {
-    return 90;
-  }
-
-  if (!server.latestSnapshot) {
-    return 82;
-  }
-
-  if (!server.latestSnapshot.reachable) {
-    return 80;
-  }
-
-  if (server.latestSnapshot.securityCount > 0) {
-    return 74;
-  }
-
-  if (server.latestSnapshot.upgradableCount > 0) {
-    return 62;
-  }
-
-  if (server.connectivityStatus === "stale") {
-    return 54;
-  }
-
-  return 20;
 }
 
 function resolveTvSignal(server: ServerSummary): TvSignal {

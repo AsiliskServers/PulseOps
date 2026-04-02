@@ -37,6 +37,28 @@ function parseCreatePayload(body: unknown) {
   };
 }
 
+function buildCreateServerData(payload: ReturnType<typeof parseCreatePayload>) {
+  return {
+    name: payload.name,
+    environment: payload.environment,
+    notes: payload.notes,
+    isActive: payload.isActive,
+    sshHost: payload.sshHost,
+    sshPort: payload.sshPort,
+  };
+}
+
+function buildUpdateServerData(payload: ReturnType<typeof parseUpdatePayload>) {
+  return {
+    name: payload.name,
+    environment: payload.environment,
+    notes: payload.notes,
+    isActive: payload.isActive,
+    sshHost: payload.sshHost,
+    sshPort: payload.sshPort,
+  };
+}
+
 function parseUpdatePayload(body: unknown) {
   if (!isRecord(body)) {
     throw new Error("Invalid request body");
@@ -180,14 +202,7 @@ export async function registerServerRoutes(
       const payload = parseCreatePayload(request.body);
       const [server, latestAgentVersion] = await Promise.all([
         prisma.server.create({
-          data: {
-            name: payload.name,
-            environment: payload.environment,
-            notes: payload.notes,
-            isActive: payload.isActive,
-            sshHost: payload.sshHost,
-            sshPort: payload.sshPort,
-          },
+          data: buildCreateServerData(payload),
           include: serverListInclude,
         }),
         getLatestAgentVersion(),
@@ -300,14 +315,7 @@ export async function registerServerRoutes(
           where: {
             id: serverId,
           },
-          data: {
-            name: payload.name,
-            environment: payload.environment,
-            notes: payload.notes,
-            isActive: payload.isActive,
-            sshHost: payload.sshHost,
-            sshPort: payload.sshPort,
-          },
+          data: buildUpdateServerData(payload),
           include: serverListInclude,
         }),
         getLatestAgentVersion(),
