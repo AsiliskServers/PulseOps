@@ -74,11 +74,13 @@ const CLOSED_RETENTION_MS = 60_000;
 const IDLE_RETENTION_MS = 15 * 60_000;
 const SHELL_PATH = "/bin/bash";
 const SHELL_WORKDIR = "/root";
+const TERMINAL_MAX_COLS = 360;
+const TERMINAL_MAX_ROWS = 120;
 
 function clampResize(value: TerminalResize): TerminalResize {
   return {
-    cols: Math.max(40, Math.min(240, Math.trunc(value.cols))),
-    rows: Math.max(12, Math.min(80, Math.trunc(value.rows))),
+    cols: Math.max(40, Math.min(TERMINAL_MAX_COLS, Math.trunc(value.cols))),
+    rows: Math.max(12, Math.min(TERMINAL_MAX_ROWS, Math.trunc(value.rows))),
   };
 }
 

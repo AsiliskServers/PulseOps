@@ -18,6 +18,9 @@ type Props = {
   onClose: () => void;
 };
 
+const TERMINAL_MAX_COLS = 360;
+const TERMINAL_MAX_ROWS = 120;
+
 type TerminalEvent =
   | {
       type: "bootstrap";
@@ -79,6 +82,13 @@ function resolveTerminalErrorMessage(message: string) {
   }
 
   return message;
+}
+
+function clampTerminalSize(input: { cols: number; rows: number }) {
+  return {
+    cols: Math.max(40, Math.min(TERMINAL_MAX_COLS, Math.trunc(input.cols))),
+    rows: Math.max(12, Math.min(TERMINAL_MAX_ROWS, Math.trunc(input.rows))),
+  };
 }
 
 export function AgentTerminal({ serverId, serverName, onClose }: Props) {
@@ -172,9 +182,14 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
         }
 
         fit.fit();
-        void resizeTerminalSession(sessionId, {
+        const size = clampTerminalSize({
           cols: terminal.cols,
           rows: terminal.rows,
+        });
+
+        void resizeTerminalSession(sessionId, size).catch((cause) => {
+          const message = cause instanceof Error ? cause.message : "Impossible de redimensionner le terminal";
+          setError(resolveTerminalErrorMessage(message));
         });
       }, 120);
     });
@@ -255,10 +270,13 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
         bindStream(session);
 
         fitAddon.fit();
-        await resizeTerminalSession(session.sessionId, {
+        await resizeTerminalSession(
+          session.sessionId,
+          clampTerminalSize({
           cols: terminal.cols,
           rows: terminal.rows,
-        });
+          })
+        );
 
         if (inputBufferRef.current) {
           const pending = inputBufferRef.current;

@@ -4,6 +4,9 @@ import { requireSessionUser } from "../lib/session.js";
 import { isRecord, readOptionalInteger, readRequiredString } from "../lib/validators.js";
 import { TerminalBroker, type TerminalEvent } from "../services/terminal-broker.js";
 
+const TERMINAL_MAX_COLS = 360;
+const TERMINAL_MAX_ROWS = 120;
+
 function writeSseEvent(event: TerminalEvent) {
   return `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
 }
@@ -143,8 +146,8 @@ export async function registerTerminalRoutes(
         return reply.status(400).send({ message: "Invalid request body" });
       }
 
-      const cols = readOptionalInteger(request.body, "cols", { min: 40, max: 240 });
-      const rows = readOptionalInteger(request.body, "rows", { min: 12, max: 80 });
+      const cols = readOptionalInteger(request.body, "cols", { min: 40, max: TERMINAL_MAX_COLS });
+      const rows = readOptionalInteger(request.body, "rows", { min: 12, max: TERMINAL_MAX_ROWS });
 
       if (!cols || !rows) {
         return reply.status(400).send({ message: "cols and rows are required" });
