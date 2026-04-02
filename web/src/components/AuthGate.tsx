@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { getMe } from "../api/auth";
+import { SESSION_QUERY_STALE_TIME_MS } from "../lib/query";
 
 function FullScreenState({ title, body }: { title: string; body: string }) {
   return (
@@ -19,6 +20,7 @@ export function RequireAuth() {
   const sessionQuery = useQuery({
     queryKey: ["session"],
     queryFn: getMe,
+    staleTime: SESSION_QUERY_STALE_TIME_MS,
   });
 
   if (sessionQuery.isLoading) {
@@ -36,6 +38,7 @@ export function GuestOnly() {
   const sessionQuery = useQuery({
     queryKey: ["session"],
     queryFn: getMe,
+    staleTime: SESSION_QUERY_STALE_TIME_MS,
   });
 
   if (sessionQuery.isLoading) {

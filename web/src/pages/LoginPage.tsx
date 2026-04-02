@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
+import { listServers } from "../api/servers";
+import { SERVERS_QUERY_STALE_TIME_MS } from "../lib/query";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -11,8 +13,13 @@ export function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: () => login(email, password),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
+    onSuccess: async (user) => {
+      queryClient.setQueryData(["session"], user);
+      void queryClient.prefetchQuery({
+        queryKey: ["servers"],
+        queryFn: listServers,
+        staleTime: SERVERS_QUERY_STALE_TIME_MS,
+      });
       navigate("/overview", { replace: true });
     },
   });

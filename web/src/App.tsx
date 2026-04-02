@@ -1,30 +1,69 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { AppLayout } from "./components/AppLayout";
 import { GuestOnly, RequireAuth } from "./components/AuthGate";
-import { AgentsPage } from "./pages/AgentsPage";
-import { LoginPage } from "./pages/LoginPage";
-import { OverviewPage } from "./pages/OverviewPage";
-import { ServerDetailPage } from "./pages/ServerDetailPage";
-import { ServersPage } from "./pages/ServersPage";
+
+const AppLayout = lazy(async () => {
+  const module = await import("./components/AppLayout");
+  return { default: module.AppLayout };
+});
+
+const LoginPage = lazy(async () => {
+  const module = await import("./pages/LoginPage");
+  return { default: module.LoginPage };
+});
+
+const OverviewPage = lazy(async () => {
+  const module = await import("./pages/OverviewPage");
+  return { default: module.OverviewPage };
+});
+
+const ServersPage = lazy(async () => {
+  const module = await import("./pages/ServersPage");
+  return { default: module.ServersPage };
+});
+
+const ServerDetailPage = lazy(async () => {
+  const module = await import("./pages/ServerDetailPage");
+  return { default: module.ServerDetailPage };
+});
+
+const AgentsPage = lazy(async () => {
+  const module = await import("./pages/AgentsPage");
+  return { default: module.AgentsPage };
+});
+
+function RouteLoading() {
+  return (
+    <div className="fullscreen-shell">
+      <div className="fullscreen-card">
+        <p className="eyebrow">PulseOps</p>
+        <h1>Chargement</h1>
+        <p>Ouverture de l'interface...</p>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<GuestOnly />}>
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
-
-      <Route element={<RequireAuth />}>
-        <Route element={<AppLayout />}>
-          <Route index element={<Navigate to="/overview" replace />} />
-          <Route path="/overview" element={<OverviewPage />} />
-          <Route path="/servers" element={<ServersPage />} />
-          <Route path="/servers/:serverId" element={<ServerDetailPage />} />
-          <Route path="/agents" element={<AgentsPage />} />
+    <Suspense fallback={<RouteLoading />}>
+      <Routes>
+        <Route element={<GuestOnly />}>
+          <Route path="/login" element={<LoginPage />} />
         </Route>
-      </Route>
 
-      <Route path="*" element={<Navigate to="/overview" replace />} />
-    </Routes>
+        <Route element={<RequireAuth />}>
+          <Route element={<AppLayout />}>
+            <Route index element={<Navigate to="/overview" replace />} />
+            <Route path="/overview" element={<OverviewPage />} />
+            <Route path="/servers" element={<ServersPage />} />
+            <Route path="/servers/:serverId" element={<ServerDetailPage />} />
+            <Route path="/agents" element={<AgentsPage />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<Navigate to="/overview" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

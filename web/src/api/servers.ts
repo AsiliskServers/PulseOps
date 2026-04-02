@@ -1,9 +1,5 @@
 import { ApiError, fetchJson } from "./client";
-import type { DashboardSummary, Job, ServerDetail, ServerPayload, ServerSummary } from "../types";
-
-export async function getSummary(): Promise<DashboardSummary> {
-  return fetchJson<DashboardSummary>("/dashboard/summary");
-}
+import type { Job, ServerDetail, ServerPayload, ServerSummary } from "../types";
 
 export async function listServers(): Promise<ServerSummary[]> {
   const payload = await fetchJson<{ servers: ServerSummary[] }>("/servers");

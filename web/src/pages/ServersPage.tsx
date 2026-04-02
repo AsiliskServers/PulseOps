@@ -1,12 +1,14 @@
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { getSummary, listServers, queueBatchJobs } from "../api/servers";
+import { listServers, queueBatchJobs } from "../api/servers";
 import {
+  buildDashboardSummary,
   formatDate,
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
+import { SERVERS_QUERY_REFETCH_INTERVAL_MS, SERVERS_QUERY_STALE_TIME_MS } from "../lib/query";
 
 function TerminalIcon() {
   return (
@@ -126,72 +128,79 @@ export function ServersPage() {
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const queryClient = useQueryClient();
 
-  const summaryQuery = useQuery({
-    queryKey: ["summary"],
-    queryFn: getSummary,
-    refetchInterval: 5000,
-  });
-
   const serversQuery = useQuery({
     queryKey: ["servers"],
     queryFn: listServers,
-    refetchInterval: 5000,
+    staleTime: SERVERS_QUERY_STALE_TIME_MS,
+    refetchInterval: SERVERS_QUERY_REFETCH_INTERVAL_MS,
   });
 
-  const filteredServers =
-    serversQuery.data?.filter((server) => {
+  const summary = useMemo(
+    () => buildDashboardSummary(serversQuery.data ?? []),
+    [serversQuery.data]
+  );
+
+  const filteredServers = useMemo(
+    () =>
+      (serversQuery.data ?? []).filter((server) => {
       const haystack =
-        `${server.name} ${server.environment} ${server.notes ?? ""} ${server.hostname ?? ""} ${
+        `${server.name} ${server.environment} ${server.hostname ?? ""} ${
           server.osName ?? ""
         } ${server.agentVersion ?? ""}`.toLowerCase();
       return haystack.includes(deferredSearch);
-    }) ?? [];
+      }),
+    [deferredSearch, serversQuery.data]
+  );
 
-  const servers = filteredServers
-    .map((server, index) => ({
-      server,
-      index,
-      state: resolveServerState(server),
-      agentState: resolveAgentVersionState(server),
-    }))
-    .sort((left, right) => {
-      if (sortMode === "default") {
-        return left.index - right.index;
-      }
+  const servers = useMemo(
+    () =>
+      filteredServers
+        .map((server, index) => ({
+          server,
+          index,
+          state: resolveServerState(server),
+          agentState: resolveAgentVersionState(server),
+        }))
+        .sort((left, right) => {
+          if (sortMode === "default") {
+            return left.index - right.index;
+          }
 
-      let comparison = 0;
+          let comparison = 0;
 
-      if (sortField === "name") {
-        comparison = left.server.name.localeCompare(right.server.name, "fr", {
-          sensitivity: "base",
-        });
-      } else if (sortField === "environment") {
-        comparison = left.server.environment.localeCompare(right.server.environment, "fr", {
-          sensitivity: "base",
-        });
-      } else if (sortField === "lastSeenAt") {
-        comparison = compareDateStrings(left.server.lastSeenAt, right.server.lastSeenAt);
-        if (sortMode === "recent") {
-          comparison *= -1;
-        }
-      } else if (sortField === "serverState") {
-        comparison = stateOrder[left.state.tone] - stateOrder[right.state.tone];
-        if (sortMode === "reverse") {
-          comparison *= -1;
-        }
-      } else if (sortField === "agentState") {
-        comparison = stateOrder[left.agentState.tone] - stateOrder[right.agentState.tone];
-        if (sortMode === "reverse") {
-          comparison *= -1;
-        }
-      }
+          if (sortField === "name") {
+            comparison = left.server.name.localeCompare(right.server.name, "fr", {
+              sensitivity: "base",
+            });
+          } else if (sortField === "environment") {
+            comparison = left.server.environment.localeCompare(right.server.environment, "fr", {
+              sensitivity: "base",
+            });
+          } else if (sortField === "lastSeenAt") {
+            comparison = compareDateStrings(left.server.lastSeenAt, right.server.lastSeenAt);
+            if (sortMode === "recent") {
+              comparison *= -1;
+            }
+          } else if (sortField === "serverState") {
+            comparison = stateOrder[left.state.tone] - stateOrder[right.state.tone];
+            if (sortMode === "reverse") {
+              comparison *= -1;
+            }
+          } else if (sortField === "agentState") {
+            comparison = stateOrder[left.agentState.tone] - stateOrder[right.agentState.tone];
+            if (sortMode === "reverse") {
+              comparison *= -1;
+            }
+          }
 
-      if (comparison !== 0) {
-        return comparison;
-      }
+          if (comparison !== 0) {
+            return comparison;
+          }
 
-      return left.index - right.index;
-    });
+          return left.index - right.index;
+        }),
+    [filteredServers, sortField, sortMode]
+  );
 
   useEffect(() => {
     if (!serversQuery.data) {
@@ -213,7 +222,6 @@ export function ServersPage() {
       setSelectedIds([]);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["servers"] }),
-        queryClient.invalidateQueries({ queryKey: ["summary"] }),
       ]);
     },
     onError: () => {
@@ -269,7 +277,6 @@ export function ServersPage() {
 
   const topError =
     (serversQuery.error instanceof Error && serversQuery.error.message) ||
-    (summaryQuery.error instanceof Error && summaryQuery.error.message) ||
     (batchMutation.error instanceof Error && batchMutation.error.message) ||
     null;
 
@@ -285,11 +292,11 @@ export function ServersPage() {
         <div className="page-header-side compact-stats">
           <div className="hero-stat">
             <span>À jour</span>
-            <strong>{summaryQuery.data?.upToDateCount ?? 0}</strong>
+            <strong>{summary.upToDateCount}</strong>
           </div>
           <div className="hero-stat">
             <span>Sécurité</span>
-            <strong>{summaryQuery.data?.securityUpdateCount ?? 0}</strong>
+            <strong>{summary.securityUpdateCount}</strong>
           </div>
         </div>
       </section>

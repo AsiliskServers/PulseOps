@@ -116,7 +116,6 @@ export function ServerDetailPage() {
     const includeDetail = options.includeDetail ?? true;
     const invalidations = [
       queryClient.invalidateQueries({ queryKey: ["servers"] }),
-      queryClient.invalidateQueries({ queryKey: ["summary"] }),
     ];
 
     if (includeDetail && serverId) {

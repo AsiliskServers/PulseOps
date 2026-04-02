@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { NavLink, Outlet } from "react-router-dom";
 import { logout } from "../api/auth";
-import { getSummary } from "../api/servers";
+import { listServers } from "../api/servers";
+import { buildDashboardSummary } from "../lib/presentation";
+import { SERVERS_QUERY_REFETCH_INTERVAL_MS, SERVERS_QUERY_STALE_TIME_MS } from "../lib/query";
 
 function LayoutLink({ to, label }: { to: string; label: string }) {
   return (
@@ -16,11 +19,16 @@ function LayoutLink({ to, label }: { to: string; label: string }) {
 
 export function AppLayout() {
   const queryClient = useQueryClient();
-  const summaryQuery = useQuery({
-    queryKey: ["summary"],
-    queryFn: getSummary,
-    refetchInterval: 5000,
+  const serversQuery = useQuery({
+    queryKey: ["servers"],
+    queryFn: listServers,
+    staleTime: SERVERS_QUERY_STALE_TIME_MS,
+    refetchInterval: SERVERS_QUERY_REFETCH_INTERVAL_MS,
   });
+  const summary = useMemo(
+    () => buildDashboardSummary(serversQuery.data ?? []),
+    [serversQuery.data]
+  );
 
   const logoutMutation = useMutation({
     mutationFn: logout,
@@ -52,19 +60,19 @@ export function AppLayout() {
           <div className="sidebar-metrics">
             <div>
               <span>Total</span>
-              <strong>{summaryQuery.data?.serverCount ?? 0}</strong>
+              <strong>{summary.serverCount}</strong>
             </div>
             <div>
               <span>En ligne</span>
-              <strong>{summaryQuery.data?.onlineCount ?? 0}</strong>
+              <strong>{summary.onlineCount}</strong>
             </div>
             <div>
               <span>Offline</span>
-              <strong>{summaryQuery.data?.offlineCount ?? 0}</strong>
+              <strong>{summary.offlineCount}</strong>
             </div>
             <div>
               <span>Jobs</span>
-              <strong>{summaryQuery.data?.queuedJobCount ?? 0}</strong>
+              <strong>{summary.queuedJobCount}</strong>
             </div>
           </div>
         </section>

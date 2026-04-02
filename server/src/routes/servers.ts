@@ -161,7 +161,7 @@ export async function registerServerRoutes(
         orderBy: {
           createdAt: "asc",
         },
-        include: serverListInclude,
+        select: serverListInclude,
       }),
       prisma.job.groupBy({
         by: ["serverId"],
@@ -203,7 +203,7 @@ export async function registerServerRoutes(
       const [server, latestAgentVersion] = await Promise.all([
         prisma.server.create({
           data: buildCreateServerData(payload),
-          include: serverListInclude,
+          select: serverListInclude,
         }),
         getLatestAgentVersion(),
       ]);
@@ -274,7 +274,7 @@ export async function registerServerRoutes(
         where: {
           id: serverId,
         },
-        include: serverDetailInclude,
+        select: serverDetailInclude,
       }),
       prisma.job.count({
         where: {
@@ -316,7 +316,7 @@ export async function registerServerRoutes(
             id: serverId,
           },
           data: buildUpdateServerData(payload),
-          include: serverListInclude,
+          select: serverListInclude,
         }),
         getLatestAgentVersion(),
       ]);

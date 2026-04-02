@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getEnrollmentSettings, rotateEnrollmentSettings } from "../api/settings";
-import { getSummary, listServers } from "../api/servers";
+import { listServers } from "../api/servers";
+import { buildDashboardSummary } from "../lib/presentation";
+import { SERVERS_QUERY_REFETCH_INTERVAL_MS, SERVERS_QUERY_STALE_TIME_MS } from "../lib/query";
 
 export function AgentsPage() {
   const [copied, setCopied] = useState<"command" | "token" | null>(null);
@@ -12,17 +14,16 @@ export function AgentsPage() {
     queryFn: getEnrollmentSettings,
   });
 
-  const summaryQuery = useQuery({
-    queryKey: ["summary"],
-    queryFn: getSummary,
-    refetchInterval: 5000,
-  });
-
   const serversQuery = useQuery({
     queryKey: ["servers"],
     queryFn: listServers,
-    refetchInterval: 5000,
+    staleTime: SERVERS_QUERY_STALE_TIME_MS,
+    refetchInterval: SERVERS_QUERY_REFETCH_INTERVAL_MS,
   });
+  const summary = useMemo(
+    () => buildDashboardSummary(serversQuery.data ?? []),
+    [serversQuery.data]
+  );
 
   const rotateMutation = useMutation({
     mutationFn: rotateEnrollmentSettings,
@@ -57,7 +58,7 @@ export function AgentsPage() {
           </div>
           <div className="hero-stat">
             <span>Jobs en attente</span>
-            <strong>{summaryQuery.data?.queuedJobCount ?? 0}</strong>
+            <strong>{summary.queuedJobCount}</strong>
           </div>
         </div>
       </section>

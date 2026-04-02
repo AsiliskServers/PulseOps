@@ -1,4 +1,4 @@
-import type { ServerDetail, ServerSummary } from "../types";
+import type { DashboardSummary, ServerDetail, ServerSummary } from "../types";
 
 type ServerRecord = ServerSummary | ServerDetail;
 
@@ -205,4 +205,64 @@ export function extractUpgradablePackages(value: string | null | undefined): str
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && line.includes("[upgradable from:"));
+}
+
+export function buildDashboardSummary(servers: readonly ServerRecord[]): DashboardSummary {
+  let reachableCount = 0;
+  let upToDateCount = 0;
+  let pendingUpdateCount = 0;
+  let securityUpdateCount = 0;
+  let onlineCount = 0;
+  let staleCount = 0;
+  let offlineCount = 0;
+  let queuedJobCount = 0;
+  let lastGlobalCheckAt: string | null = null;
+  let latestCheckTime = 0;
+
+  for (const server of servers) {
+    queuedJobCount += server.pendingJobsCount;
+
+    if (server.connectivityStatus === "online") {
+      onlineCount++;
+    } else if (server.connectivityStatus === "stale") {
+      staleCount++;
+    } else {
+      offlineCount++;
+    }
+
+    const snapshot = server.latestSnapshot;
+    if (!snapshot) {
+      continue;
+    }
+
+    if (snapshot.reachable) {
+      reachableCount++;
+    }
+
+    if (snapshot.reachable && snapshot.upgradableCount === 0) {
+      upToDateCount++;
+    }
+
+    pendingUpdateCount += snapshot.upgradableCount;
+    securityUpdateCount += snapshot.securityCount;
+
+    const checkTime = new Date(snapshot.lastCheckAt).getTime();
+    if (checkTime > latestCheckTime) {
+      latestCheckTime = checkTime;
+      lastGlobalCheckAt = snapshot.lastCheckAt;
+    }
+  }
+
+  return {
+    serverCount: servers.length,
+    reachableCount,
+    upToDateCount,
+    pendingUpdateCount,
+    securityUpdateCount,
+    lastGlobalCheckAt,
+    onlineCount,
+    staleCount,
+    offlineCount,
+    queuedJobCount,
+  };
 }

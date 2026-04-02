@@ -24,7 +24,6 @@ export type ServerSnapshot = {
   rebootRequired: boolean;
   lastCheckAt: string;
   outputPreview: string;
-  rawSummaryJson: string;
 };
 
 export type Job = {
@@ -44,7 +43,6 @@ export type ServerSummary = {
   id: string;
   name: string;
   environment: "production" | "staging" | "internal" | "other" | string;
-  notes: string | null;
   isActive: boolean;
   agentId: string | null;
   hostname: string | null;
@@ -66,6 +64,7 @@ export type ServerSummary = {
 };
 
 export type ServerDetail = ServerSummary & {
+  notes: string | null;
   recentJobs: Job[];
 };
 

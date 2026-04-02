@@ -1894,36 +1894,6 @@ pre {
   color: #94a9bb;
 }
 
-.agent-terminal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(7, 16, 24, 0.58);
-  backdrop-filter: blur(10px);
-}
-
-.agent-terminal-panel {
-  width: min(1320px, 100%);
-  height: 100%;
-  max-height: calc(100vh - 48px);
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  gap: 14px;
-  padding: 18px;
-  border-radius: 26px;
-  border: 1px solid rgba(123, 146, 168, 0.24);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
-    #08131d;
-  box-shadow:
-    0 26px 80px rgba(3, 11, 18, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
 .agent-terminal-topbar {
   display: flex;
   justify-content: space-between;

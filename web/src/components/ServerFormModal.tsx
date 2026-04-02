@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import type { ServerPayload, ServerSummary } from "../types";
+import type { ServerDetail, ServerPayload } from "../types";
 
 type Props = {
   open: boolean;
-  initialServer?: ServerSummary | null;
+  initialServer?: ServerDetail | null;
   pending: boolean;
   onClose: () => void;
   onSubmit: (payload: ServerPayload) => void;

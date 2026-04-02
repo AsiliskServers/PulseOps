@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { getSummary, listServers } from "../api/servers";
+import { listServers } from "../api/servers";
 import type { DashboardSummary, ServerSummary } from "../types";
 import {
+  buildDashboardSummary,
   formatDate,
   getServerPriorityScore,
   resolveMonitoringBucket,
   resolveServerState,
 } from "../lib/presentation";
+import { SERVERS_QUERY_REFETCH_INTERVAL_MS, SERVERS_QUERY_STALE_TIME_MS } from "../lib/query";
 
 type MonitoringSlice = {
   key: string;
@@ -271,19 +273,15 @@ export function OverviewPage() {
     };
   }, [tvMode]);
 
-  const summaryQuery = useQuery({
-    queryKey: ["summary"],
-    queryFn: getSummary,
-    refetchInterval: 5000,
-  });
-
   const serversQuery = useQuery({
     queryKey: ["servers"],
     queryFn: listServers,
-    refetchInterval: 5000,
+    staleTime: SERVERS_QUERY_STALE_TIME_MS,
+    refetchInterval: SERVERS_QUERY_REFETCH_INTERVAL_MS,
   });
 
   const servers = serversQuery.data ?? [];
+  const summary = useMemo(() => buildDashboardSummary(servers), [servers]);
   const productionCount = servers.filter((server) => server.environment === "production").length;
   const staleOrOfflineCount = servers.filter(
     (server) => server.connectivityStatus === "stale" || server.connectivityStatus === "offline"
@@ -308,7 +306,7 @@ export function OverviewPage() {
   const monitoringSlices = buildMonitoringSlices(servers);
   const monitoredCount = monitoringSlices.reduce((total, slice) => total + slice.count, 0);
   const activeMonitoringSlices = monitoringSlices.filter((slice) => slice.count > 0);
-  const tvBanner = resolveTvBanner(summaryQuery.data);
+  const tvBanner = resolveTvBanner(summary);
   const currentTimeLabel = new Intl.DateTimeFormat("fr-FR", {
     dateStyle: "full",
     timeStyle: "short",
@@ -458,7 +456,7 @@ export function OverviewPage() {
                 </div>
                 <div className="monitoring-hub-stat">
                   <span>Jobs</span>
-                  <strong>{summaryQuery.data?.queuedJobCount ?? 0}</strong>
+                  <strong>{summary.queuedJobCount}</strong>
                 </div>
               </div>
             </div>
@@ -471,19 +469,19 @@ export function OverviewPage() {
       <div className="summary-grid monitoring-summary-grid">
         <article className="mini-summary">
           <span>Joignables</span>
-          <strong>{summaryQuery.data?.reachableCount ?? 0}</strong>
+          <strong>{summary.reachableCount}</strong>
         </article>
         <article className="mini-summary">
           <span>À jour</span>
-          <strong>{summaryQuery.data?.upToDateCount ?? 0}</strong>
+          <strong>{summary.upToDateCount}</strong>
         </article>
         <article className="mini-summary">
           <span>À surveiller</span>
-          <strong>{summaryQuery.data?.staleCount ?? 0}</strong>
+          <strong>{summary.staleCount}</strong>
         </article>
         <article className="mini-summary">
           <span>Correctifs sécurité</span>
-          <strong>{summaryQuery.data?.securityUpdateCount ?? 0}</strong>
+          <strong>{summary.securityUpdateCount}</strong>
         </article>
         <article className="mini-summary">
           <span>Production</span>
@@ -499,7 +497,7 @@ export function OverviewPage() {
         </article>
         <article className="mini-summary">
           <span>Dernier report</span>
-          <strong>{formatDate(summaryQuery.data?.lastGlobalCheckAt)}</strong>
+          <strong>{formatDate(summary.lastGlobalCheckAt)}</strong>
         </article>
       </div>
     </section>
@@ -566,7 +564,7 @@ export function OverviewPage() {
           <div className="tv-banner-metrics">
             <div>
               <span>Dernier report</span>
-              <strong>{formatDate(summaryQuery.data?.lastGlobalCheckAt)}</strong>
+              <strong>{formatDate(summary.lastGlobalCheckAt)}</strong>
             </div>
             <div>
               <span>Production</span>
@@ -578,27 +576,27 @@ export function OverviewPage() {
         <section className="tv-metrics-grid">
           <article className="tv-metric-card">
             <span>Total serveurs</span>
-            <strong>{summaryQuery.data?.serverCount ?? 0}</strong>
+            <strong>{summary.serverCount}</strong>
           </article>
           <article className="tv-metric-card">
             <span>En ligne</span>
-            <strong>{summaryQuery.data?.onlineCount ?? 0}</strong>
+            <strong>{summary.onlineCount}</strong>
           </article>
           <article className="tv-metric-card">
             <span>À jour</span>
-            <strong>{summaryQuery.data?.upToDateCount ?? 0}</strong>
+            <strong>{summary.upToDateCount}</strong>
           </article>
           <article className="tv-metric-card">
             <span>MàJ en attente</span>
-            <strong>{summaryQuery.data?.pendingUpdateCount ?? 0}</strong>
+            <strong>{summary.pendingUpdateCount}</strong>
           </article>
           <article className="tv-metric-card">
             <span>Sécurité</span>
-            <strong>{summaryQuery.data?.securityUpdateCount ?? 0}</strong>
+            <strong>{summary.securityUpdateCount}</strong>
           </article>
           <article className="tv-metric-card">
             <span>Jobs</span>
-            <strong>{summaryQuery.data?.queuedJobCount ?? 0}</strong>
+            <strong>{summary.queuedJobCount}</strong>
           </article>
         </section>
 
@@ -733,11 +731,11 @@ export function OverviewPage() {
           <div className="page-header-side">
             <div className="hero-stat">
               <span>Dernière vérification</span>
-              <strong>{formatDate(summaryQuery.data?.lastGlobalCheckAt)}</strong>
+              <strong>{formatDate(summary.lastGlobalCheckAt)}</strong>
             </div>
             <div className="hero-stat">
               <span>Updates en attente</span>
-              <strong>{summaryQuery.data?.pendingUpdateCount ?? 0}</strong>
+              <strong>{summary.pendingUpdateCount}</strong>
             </div>
           </div>
         </section>
@@ -745,19 +743,19 @@ export function OverviewPage() {
         <section className="overview-cards">
           <article className="stat-card">
             <span>Serveurs</span>
-            <strong>{summaryQuery.data?.serverCount ?? 0}</strong>
+            <strong>{summary.serverCount}</strong>
           </article>
           <article className="stat-card">
             <span>En ligne</span>
-            <strong>{summaryQuery.data?.onlineCount ?? 0}</strong>
+            <strong>{summary.onlineCount}</strong>
           </article>
           <article className="stat-card">
             <span>Offline</span>
-            <strong>{summaryQuery.data?.offlineCount ?? 0}</strong>
+            <strong>{summary.offlineCount}</strong>
           </article>
           <article className="stat-card">
             <span>Jobs en attente</span>
-            <strong>{summaryQuery.data?.queuedJobCount ?? 0}</strong>
+            <strong>{summary.queuedJobCount}</strong>
           </article>
         </section>
 
@@ -779,3 +777,4 @@ export function OverviewPage() {
     </>
   );
 }
+

@@ -4,42 +4,79 @@ import { isPendingJobStatus } from "../lib/jobs.js";
 import { deriveConnectivityStatus } from "./connectivity.js";
 import { resolveAgentUpdateStatus } from "./agent-release.js";
 
+const snapshotSelect = {
+  id: true,
+  reachable: true,
+  upgradableCount: true,
+  securityCount: true,
+  rebootRequired: true,
+  lastCheckAt: true,
+  outputPreview: true,
+} satisfies Prisma.ServerSnapshotSelect;
+
+const jobSelect = {
+  id: true,
+  type: true,
+  status: true,
+  claimedAt: true,
+  startedAt: true,
+  finishedAt: true,
+  outputPreview: true,
+  errorMessage: true,
+  createdAt: true,
+  triggeredByUserId: true,
+} satisfies Prisma.JobSelect;
+
 export const serverListInclude = {
+  id: true,
+  name: true,
+  environment: true,
+  isActive: true,
+  agentId: true,
+  hostname: true,
+  sshHost: true,
+  sshPort: true,
+  osName: true,
+  osVersion: true,
+  agentVersion: true,
+  lastSeenAt: true,
+  lastReportAt: true,
+  createdAt: true,
+  updatedAt: true,
   snapshots: {
     orderBy: {
-      lastCheckAt: "desc",
+      lastCheckAt: "desc" as const,
     },
     take: 1,
+    select: snapshotSelect,
   },
   jobs: {
     orderBy: {
-      createdAt: "desc",
+      createdAt: "desc" as const,
     },
     take: 1,
+    select: jobSelect,
   },
-} satisfies Prisma.ServerInclude;
+} satisfies Prisma.ServerSelect;
 
 export const serverDetailInclude = {
-  snapshots: {
-    orderBy: {
-      lastCheckAt: "desc",
-    },
-    take: 1,
-  },
+  ...serverListInclude,
+  notes: true,
   jobs: {
     orderBy: {
-      createdAt: "desc",
+      createdAt: "desc" as const,
     },
     take: 20,
+    select: jobSelect,
   },
-} satisfies Prisma.ServerInclude;
+} satisfies Prisma.ServerSelect;
 
 export type ServerListRecord = Prisma.ServerGetPayload<{
-  include: typeof serverListInclude;
+  select: typeof serverListInclude;
 }>;
 
 export type ServerDetailRecord = Prisma.ServerGetPayload<{
-  include: typeof serverDetailInclude;
+  select: typeof serverDetailInclude;
 }>;
 
 type SnapshotRecord = ServerListRecord["snapshots"][number];
@@ -71,7 +108,6 @@ export function serializeSnapshot(snapshot: SnapshotRecord | null | undefined) {
     rebootRequired: snapshot.rebootRequired,
     lastCheckAt: snapshot.lastCheckAt.toISOString(),
     outputPreview: snapshot.outputPreview,
-    rawSummaryJson: snapshot.rawSummaryJson,
   };
 }
 
@@ -120,7 +156,6 @@ export function serializeServer(
     id: server.id,
     name: server.name,
     environment: server.environment,
-    notes: server.notes,
     isActive: server.isActive,
     agentId: server.agentId,
     hostname: server.hostname,
@@ -156,6 +191,7 @@ export function serializeServerDetail(
         pendingJobsCount: getPendingJobsCount(server.jobs, options.pendingJobsCount),
       }
     ),
+    notes: server.notes,
     recentJobs: server.jobs.map((job) => serializeJob(job)),
   };
 }
