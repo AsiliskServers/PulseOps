@@ -3,7 +3,14 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getSummary, listServers } from "../api/servers";
 import type { DashboardSummary, ServerSummary } from "../types";
-import { formatDate, resolveServerState } from "../lib/presentation";
+import {
+  formatDate,
+  getServerPriorityScore,
+  resolveMonitoringBucket,
+  resolveServerState,
+  resolveTvSignal,
+  resolveTvWallAccent,
+} from "../lib/presentation";
 
 type MonitoringSlice = {
   key: string;
@@ -107,39 +114,13 @@ function buildMonitoringSlices(servers: ServerSummary[]): MonitoringSlice[] {
       position: "bottom-right",
     },
   ];
+  const slicesByKey = new Map(monitoringSlices.map((slice) => [slice.key, slice]));
 
   for (const server of servers) {
-    if (!server.latestSnapshot) {
-      monitoringSlices[2].count += 1;
-      continue;
+    const slice = slicesByKey.get(resolveMonitoringBucket(server));
+    if (slice) {
+      slice.count += 1;
     }
-
-    if (server.latestJob?.status === "failed") {
-      monitoringSlices[5].count += 1;
-      continue;
-    }
-
-    if (server.connectivityStatus === "offline" || !server.latestSnapshot.reachable) {
-      monitoringSlices[5].count += 1;
-      continue;
-    }
-
-    if (server.connectivityStatus === "stale") {
-      monitoringSlices[1].count += 1;
-      continue;
-    }
-
-    if (server.latestSnapshot.securityCount > 0) {
-      monitoringSlices[0].count += 1;
-      continue;
-    }
-
-    if (server.latestSnapshot.upgradableCount > 0) {
-      monitoringSlices[3].count += 1;
-      continue;
-    }
-
-    monitoringSlices[4].count += 1;
   }
 
   return monitoringSlices;
