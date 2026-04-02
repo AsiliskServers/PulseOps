@@ -43,6 +43,10 @@ model Server {
   updatedAt            DateTime         @updatedAt
   snapshots            ServerSnapshot[]
   jobs                 Job[]
+
+  @@index([createdAt])
+  @@index([lastSeenAt])
+  @@index([lastReportAt])
 }
 
 model ServerSnapshot {
@@ -79,4 +83,5 @@ model Job {
 
   @@index([serverId, createdAt])
   @@index([status, createdAt])
+  @@index([serverId, status, createdAt])
 }

@@ -97,6 +97,7 @@ function isPinnedToBottom(terminal: Terminal) {
 }
 
 export function AgentTerminal({ serverId, serverName, onClose }: Props) {
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -201,8 +202,8 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       }, 80);
     });
 
-    if (canvasRef.current) {
-      resizeObserver.observe(canvasRef.current);
+    if (surfaceRef.current) {
+      resizeObserver.observe(surfaceRef.current);
     }
 
     const bindStream = (session: TerminalSessionResponse) => {
@@ -413,7 +414,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
 
       {error ? <div className="alert error">{error}</div> : null}
 
-      <div className="agent-terminal-surface">
+      <div ref={surfaceRef} className="agent-terminal-surface">
         <div ref={canvasRef} className="agent-terminal-canvas" />
       </div>
 

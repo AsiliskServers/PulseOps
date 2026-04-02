@@ -4,7 +4,22 @@ import { prisma } from "../lib/prisma.js";
 import { requireSessionUser } from "../lib/session.js";
 import { deriveConnectivityStatus } from "../services/connectivity.js";
 import type { ServerEnv } from "../lib/env.js";
-import { serverListInclude } from "../services/serializers.js";
+
+const dashboardSummarySelect = {
+  lastSeenAt: true,
+  snapshots: {
+    orderBy: {
+      lastCheckAt: "desc" as const,
+    },
+    take: 1,
+    select: {
+      reachable: true,
+      upgradableCount: true,
+      securityCount: true,
+      lastCheckAt: true,
+    },
+  },
+};
 
 export async function registerDashboardRoutes(
   app: FastifyInstance,
@@ -22,7 +37,7 @@ export async function registerDashboardRoutes(
         orderBy: {
           createdAt: "asc",
         },
-        include: serverListInclude,
+        select: dashboardSummarySelect,
       }),
       prisma.job.count({
         where: {

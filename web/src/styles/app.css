@@ -1715,6 +1715,8 @@ pre {
 
 .server-detail-page.terminal-mode .detail-stage {
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .server-detail-page.terminal-mode .detail-stage-content,
@@ -1726,6 +1728,9 @@ pre {
 }
 
 .detail-stage.terminal-active .detail-stage-content {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
   opacity: 0;
   transform: translateY(18px) scale(0.985);
   filter: blur(6px);
@@ -1734,6 +1739,7 @@ pre {
 
 .detail-stage.terminal-active .detail-stage-terminal {
   display: block;
+  position: relative;
   min-height: 0;
   height: 100%;
   animation: terminal-stage-in 260ms ease both;
