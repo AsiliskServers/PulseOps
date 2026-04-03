@@ -1,9 +1,17 @@
-import { fetchJson } from "./client";
+import { ApiError, fetchJson } from "./client";
 import type { CategorySummary } from "../types";
 
 export async function listCategories(): Promise<CategorySummary[]> {
-  const payload = await fetchJson<{ categories: CategorySummary[] }>("/categories");
-  return payload.categories;
+  try {
+    const payload = await fetchJson<{ categories: CategorySummary[] }>("/categories");
+    return payload.categories;
+  } catch (error) {
+    if (error instanceof ApiError && error.statusCode === 404) {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 export async function createCategory(name: string): Promise<CategorySummary> {

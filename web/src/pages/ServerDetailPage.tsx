@@ -157,7 +157,7 @@ export function ServerDetailPage() {
   }, [server?.id, server?.notes]);
 
   useEffect(() => {
-    setSelectedCategoryIds(server?.categories.map((category) => category.id) ?? []);
+    setSelectedCategoryIds(server?.categories?.map((category) => category.id) ?? []);
   }, [server?.categories, server?.id]);
 
   const updateMutation = useMutation({
@@ -276,7 +276,8 @@ export function ServerDetailPage() {
   const hasHistory = Boolean(server?.latestSnapshot) || (server?.recentJobs.length ?? 0) > 0;
   const notesDirty = notesDraft !== (server?.notes ?? "");
   const categorySelectionDirty =
-    selectedCategoryIds.join("|") !== (server?.categories.map((category) => category.id) ?? []).join("|");
+    selectedCategoryIds.join("|") !==
+    (server?.categories?.map((category) => category.id) ?? []).join("|");
   const agentUpdateLive = liveJob?.type === "agent_update";
   const topError =
     (detailQuery.error instanceof Error && detailQuery.error.message) ||
@@ -734,9 +735,7 @@ export function ServerDetailPage() {
                 <button
                   className="ghost-button small"
                   type="button"
-                  onClick={() =>
-                    setSelectedCategoryIds(server.categories.map((category) => category.id))
-                  }
+                  onClick={() => setSelectedCategoryIds(server.categories?.map((category) => category.id) ?? [])}
                   disabled={!categorySelectionDirty || categoriesMutation.isPending}
                 >
                   Reinitialiser

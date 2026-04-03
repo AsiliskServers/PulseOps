@@ -159,14 +159,16 @@ export function ServersPage() {
   const filteredServers = useMemo(
     () =>
       (serversQuery.data ?? []).filter((server) => {
-        if (categoryId && !server.categories.some((category) => category.id === categoryId)) {
+        const categories = server.categories ?? [];
+
+        if (categoryId && !categories.some((category) => category.id === categoryId)) {
           return false;
         }
 
         const haystack =
           `${server.name} ${server.environment} ${server.hostname ?? ""} ${
             server.osName ?? ""
-          } ${server.agentVersion ?? ""} ${server.categories
+          } ${server.agentVersion ?? ""} ${categories
             .map((category) => category.name)
             .join(" ")}`.toLowerCase();
         return haystack.includes(deferredSearch);
