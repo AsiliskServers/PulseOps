@@ -4,27 +4,35 @@ import { isPendingJobStatus } from "../lib/jobs.js";
 import { deriveConnectivityStatus } from "./connectivity.js";
 import { resolveAgentUpdateStatus } from "./agent-release.js";
 
-const snapshotSelect = {
+const listSnapshotSelect = {
   id: true,
   reachable: true,
   upgradableCount: true,
   securityCount: true,
   rebootRequired: true,
   lastCheckAt: true,
+} satisfies Prisma.ServerSnapshotSelect;
+
+const detailSnapshotSelect = {
+  ...listSnapshotSelect,
   outputPreview: true,
 } satisfies Prisma.ServerSnapshotSelect;
 
-const jobSelect = {
+const listJobSelect = {
   id: true,
   type: true,
   status: true,
+  createdAt: true,
+  triggeredByUserId: true,
+} satisfies Prisma.JobSelect;
+
+const detailJobSelect = {
+  ...listJobSelect,
   claimedAt: true,
   startedAt: true,
   finishedAt: true,
   outputPreview: true,
   errorMessage: true,
-  createdAt: true,
-  triggeredByUserId: true,
 } satisfies Prisma.JobSelect;
 
 export const serverListInclude = {
@@ -48,26 +56,33 @@ export const serverListInclude = {
       lastCheckAt: "desc" as const,
     },
     take: 1,
-    select: snapshotSelect,
+    select: listSnapshotSelect,
   },
   jobs: {
     orderBy: {
       createdAt: "desc" as const,
     },
     take: 1,
-    select: jobSelect,
+    select: listJobSelect,
   },
 } satisfies Prisma.ServerSelect;
 
 export const serverDetailInclude = {
   ...serverListInclude,
   notes: true,
+  snapshots: {
+    orderBy: {
+      lastCheckAt: "desc" as const,
+    },
+    take: 1,
+    select: detailSnapshotSelect,
+  },
   jobs: {
     orderBy: {
       createdAt: "desc" as const,
     },
     take: 20,
-    select: jobSelect,
+    select: detailJobSelect,
   },
 } satisfies Prisma.ServerSelect;
 
@@ -79,23 +94,39 @@ export type ServerDetailRecord = Prisma.ServerGetPayload<{
   select: typeof serverDetailInclude;
 }>;
 
-type SnapshotRecord = ServerListRecord["snapshots"][number];
-type JobRecord = ServerDetailRecord["jobs"][number];
-type JobLike = Pick<
-  JobRecord,
-  "id" | "type" | "status" | "claimedAt" | "startedAt" | "finishedAt" | "outputPreview" | "errorMessage" | "createdAt" | "triggeredByUserId"
->;
+type SnapshotLike = {
+  id: string;
+  reachable: boolean;
+  upgradableCount: number;
+  securityCount: number;
+  rebootRequired: boolean;
+  lastCheckAt: Date;
+  outputPreview?: string | null;
+};
+
+type JobLike = {
+  id: string;
+  type: string;
+  status: string;
+  createdAt: Date;
+  triggeredByUserId: string;
+  claimedAt?: Date | null;
+  startedAt?: Date | null;
+  finishedAt?: Date | null;
+  outputPreview?: string | null;
+  errorMessage?: string | null;
+};
 
 type SerializeServerOptions = {
   latestAgentVersion?: string | null;
   pendingJobsCount?: number;
 };
 
-function getPendingJobsCount(jobs: readonly JobRecord[], explicitCount?: number): number {
+function getPendingJobsCount(jobs: readonly JobLike[], explicitCount?: number): number {
   return explicitCount ?? jobs.filter((job) => isPendingJobStatus(job.status)).length;
 }
 
-export function serializeSnapshot(snapshot: SnapshotRecord | null | undefined) {
+export function serializeSnapshot(snapshot: SnapshotLike | null | undefined) {
   if (!snapshot) {
     return null;
   }
@@ -107,7 +138,7 @@ export function serializeSnapshot(snapshot: SnapshotRecord | null | undefined) {
     securityCount: snapshot.securityCount,
     rebootRequired: snapshot.rebootRequired,
     lastCheckAt: snapshot.lastCheckAt.toISOString(),
-    outputPreview: snapshot.outputPreview,
+    outputPreview: snapshot.outputPreview ?? "",
   };
 }
 
@@ -148,7 +179,7 @@ export function serializeServer(
   env: ServerEnv,
   options: SerializeServerOptions = {}
 ) {
-  const jobs = server.jobs;
+  const jobs = server.jobs as readonly JobLike[];
   const latestAgentVersion = options.latestAgentVersion ?? null;
   const pendingJobsCount = getPendingJobsCount(jobs, options.pendingJobsCount);
 
@@ -171,7 +202,7 @@ export function serializeServer(
     connectivityStatus: deriveConnectivityStatus(server.lastSeenAt, env),
     createdAt: server.createdAt.toISOString(),
     updatedAt: server.updatedAt.toISOString(),
-    latestSnapshot: serializeSnapshot(server.snapshots[0]),
+    latestSnapshot: serializeSnapshot(server.snapshots[0] as SnapshotLike | undefined),
     latestJob: serializeJob(jobs[0]),
     pendingJobsCount,
   };
@@ -183,14 +214,10 @@ export function serializeServerDetail(
   options: SerializeServerOptions = {}
 ) {
   return {
-    ...serializeServer(
-      server,
-      env,
-      {
-        ...options,
-        pendingJobsCount: getPendingJobsCount(server.jobs, options.pendingJobsCount),
-      }
-    ),
+    ...serializeServer(server, env, {
+      ...options,
+      pendingJobsCount: getPendingJobsCount(server.jobs, options.pendingJobsCount),
+    }),
     notes: server.notes,
     recentJobs: server.jobs.map((job) => serializeJob(job)),
   };

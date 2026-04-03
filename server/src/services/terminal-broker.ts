@@ -179,12 +179,11 @@ export class TerminalBroker {
     }
 
     if (session.status === "pending") {
-      this.markClosed(session, "Session fermée.");
+      this.markClosed(session, "Session fermee.");
       return;
     }
 
-    session.closeRequested = true;
-    session.updatedAt = Date.now();
+    this.requestClose(session, "Session fermee.");
   }
 
   syncForAgent(serverId: string, payload: AgentTerminalSyncPayload): { sessions: TerminalAction[] } {
@@ -300,7 +299,7 @@ export class TerminalBroker {
   private markClosed(session: TerminalSession, reason: string | null) {
     session.status = "closed";
     session.closeRequested = false;
-    session.closeReason = reason;
+    session.closeReason = reason ?? session.closeReason;
     session.updatedAt = Date.now();
 
     this.emit(session, {
@@ -311,8 +310,14 @@ export class TerminalBroker {
     this.emit(session, {
       type: "closed",
       sessionId: session.id,
-      reason,
+      reason: session.closeReason,
     });
+  }
+
+  private requestClose(session: TerminalSession, reason: string | null) {
+    session.closeRequested = true;
+    session.closeReason = reason ?? session.closeReason;
+    session.updatedAt = Date.now();
   }
 
   private cleanup() {
@@ -325,7 +330,12 @@ export class TerminalBroker {
       }
 
       if (session.status !== "closed" && now - session.updatedAt > IDLE_RETENTION_MS) {
-        this.markClosed(session, "Session expirée.");
+        if (session.status === "pending") {
+          this.markClosed(session, "Session expiree.");
+          continue;
+        }
+
+        this.requestClose(session, "Session expiree.");
       }
     }
   }

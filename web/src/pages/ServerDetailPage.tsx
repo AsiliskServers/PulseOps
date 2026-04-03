@@ -108,6 +108,7 @@ export function ServerDetailPage() {
   const { serverId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const terminalOpen = searchParams.get("terminal") === "1";
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
@@ -130,12 +131,12 @@ export function ServerDetailPage() {
     queryFn: () => getServer(serverId!),
     enabled: Boolean(serverId),
     refetchInterval: (query) => {
-      if (!serverId) {
+      if (!serverId || terminalOpen) {
         return false;
       }
 
       const data = query.state.data as ServerDetail | undefined;
-      return data?.recentJobs.some(isLiveJob) ? 1500 : 5000;
+      return data?.recentJobs.some(isLiveJob) ? 1500 : 10_000;
     },
   });
 
@@ -213,7 +214,6 @@ export function ServerDetailPage() {
     server?.recentJobs.find(isLiveJob) ??
     (server?.latestJob && isLiveJob(server.latestJob) ? server.latestJob : null);
   const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
-  const terminalOpen = searchParams.get("terminal") === "1";
   const canOpenTerminal = Boolean(server?.agentId && server.isActive);
   const sshCommand = canOpenTerminal
     ? "Ouvrir le terminal root via l'agent"
