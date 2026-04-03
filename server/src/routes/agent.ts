@@ -304,6 +304,12 @@ export async function registerAgentRoutes(
         return reply.status(404).send({ message: "Job not found" });
       }
 
+      if (job.status !== "claimed" && job.status !== "running") {
+        return reply.status(409).send({
+          message: "Job is no longer active",
+        });
+      }
+
       const status = readRequiredString(body, "status", "status");
 
       if (status !== "running" && status !== "success" && status !== "failed") {
