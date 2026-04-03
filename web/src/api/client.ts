@@ -10,6 +10,28 @@ export class ApiError extends Error {
   }
 }
 
+function resolveHttpErrorMessage(statusCode: number, rawText: string) {
+  const text = rawText.trim();
+
+  if (text) {
+    return text;
+  }
+
+  if (statusCode === 502) {
+    return "Le serveur PulseOps est indisponible (502). Verifie que pulseops.service est demarre.";
+  }
+
+  if (statusCode === 503) {
+    return "Le serveur PulseOps est temporairement indisponible (503).";
+  }
+
+  if (statusCode === 504) {
+    return "Le serveur PulseOps a mis trop de temps a repondre (504).";
+  }
+
+  return `API error (${statusCode})`;
+}
+
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers ?? {});
 
@@ -27,12 +49,15 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
     return undefined as T;
   }
 
+  const rawText = await response.text();
   let payload: unknown = null;
 
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
+  if (rawText) {
+    try {
+      payload = JSON.parse(rawText);
+    } catch {
+      payload = null;
+    }
   }
 
   if (!response.ok) {
@@ -42,9 +67,13 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
       "message" in payload &&
       typeof payload.message === "string"
         ? payload.message
-        : "Unexpected API error";
+        : resolveHttpErrorMessage(response.status, rawText);
 
     throw new ApiError(message, response.status);
+  }
+
+  if (payload === null) {
+    return undefined as T;
   }
 
   return payload as T;

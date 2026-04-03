@@ -1,8 +1,8 @@
 import { prisma } from "../lib/prisma.js";
 
-const INTERRUPTED_JOB_STATUSES = ["claimed", "running"] as const;
+const INTERRUPTED_JOB_STATUSES = ["queued", "claimed", "running"] as const;
 const INTERRUPTED_JOB_MESSAGE =
-  "Job interrompu automatiquement : le serveur principal PulseOps a redémarré.";
+  "Job interrompu automatiquement : le serveur principal PulseOps a redemarre.";
 
 export async function interruptInFlightJobsOnStartup() {
   const now = new Date();
