@@ -13,11 +13,11 @@ export async function initializePrisma() {
   const isSqlite = databaseUrl.startsWith("file:");
 
   if (isSqlite) {
-    await prisma.$executeRawUnsafe("PRAGMA journal_mode = WAL;");
-    await prisma.$executeRawUnsafe("PRAGMA synchronous = NORMAL;");
-    await prisma.$executeRawUnsafe("PRAGMA foreign_keys = ON;");
-    await prisma.$executeRawUnsafe("PRAGMA temp_store = MEMORY;");
-    await prisma.$executeRawUnsafe("PRAGMA busy_timeout = 15000;");
+    await prisma.$queryRawUnsafe("PRAGMA journal_mode = WAL;");
+    await prisma.$queryRawUnsafe("PRAGMA synchronous = NORMAL;");
+    await prisma.$queryRawUnsafe("PRAGMA foreign_keys = ON;");
+    await prisma.$queryRawUnsafe("PRAGMA temp_store = MEMORY;");
+    await prisma.$queryRawUnsafe("PRAGMA busy_timeout = 15000;");
   }
 
   prismaInitialized = true;
