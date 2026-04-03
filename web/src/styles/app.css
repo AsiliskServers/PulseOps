@@ -1982,20 +1982,27 @@ pre {
   height: 100%;
   min-height: 0;
   max-height: 100%;
+  background: transparent !important;
   overflow: hidden;
 }
 
 .agent-terminal-canvas .xterm-screen {
   height: 100% !important;
   max-height: 100% !important;
+  background: transparent !important;
 }
 
 .agent-terminal-canvas .xterm-viewport {
   height: 100% !important;
   max-height: 100% !important;
+  background: #0c1722 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   overscroll-behavior: contain;
+}
+
+.agent-terminal-canvas .xterm-scroll-area {
+  background: #0c1722 !important;
 }
 
 .agent-terminal-shell {
