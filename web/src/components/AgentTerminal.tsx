@@ -458,6 +458,10 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
             <span className={`status-pill ${getStatusTone(status)}`}>{getStatusLabel(status)}</span>
           </div>
           <p className="page-copy">Shell root proxifie via l&apos;agent installe sur le serveur cible.</p>
+          <p className="agent-terminal-meta">
+            <span>Session</span>
+            <strong>{sessionRef.current?.sessionId ?? "Preparation..."}</strong>
+          </p>
         </div>
 
         <div className="inline-actions">
@@ -480,11 +484,6 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
           <div ref={canvasRef} className="agent-terminal-canvas" />
         </div>
       </div>
-
-      <footer className="agent-terminal-footer">
-        <span>Selection de texte active. Le terminal accepte aussi le collage clavier natif.</span>
-        <strong>{sessionRef.current?.sessionId ?? "Session en preparation"}</strong>
-      </footer>
     </section>
   );
 }

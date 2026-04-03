@@ -1918,11 +1918,37 @@ pre {
   color: rgba(216, 229, 242, 0.72);
 }
 
+.agent-terminal-meta {
+  margin: 6px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: rgba(216, 229, 242, 0.68);
+  font-size: 12px;
+}
+
+.agent-terminal-meta span {
+  color: rgba(216, 229, 242, 0.56);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.agent-terminal-meta strong {
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  color: rgba(216, 229, 242, 0.92);
+  word-break: break-all;
+}
+
 .agent-terminal-surface {
   min-height: 0;
-  height: 100%;
+  flex: 1 1 auto;
+  height: auto;
   max-height: 100%;
-  display: grid;
+  display: flex;
   border-radius: 20px;
   border: 1px solid rgba(123, 146, 168, 0.22);
   background:
@@ -1932,8 +1958,10 @@ pre {
 }
 
 .agent-terminal-frame {
+  width: 100%;
   min-height: 0;
-  height: 100%;
+  flex: 1 1 auto;
+  height: auto;
   max-height: 100%;
   padding: 18px;
   display: flex;
@@ -1970,28 +1998,12 @@ pre {
   overscroll-behavior: contain;
 }
 
-.agent-terminal-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  color: rgba(216, 229, 242, 0.68);
-  font-size: 12px;
-}
-
-.agent-terminal-footer strong {
-  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  font-size: 11px;
-  color: rgba(216, 229, 242, 0.9);
-  word-break: break-all;
-}
-
 .agent-terminal-shell {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   padding: 18px;
   border-radius: 24px;
