@@ -8,6 +8,7 @@ import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerAgentRoutes } from "./routes/agent.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerPublicRoutes } from "./routes/public.js";
+import { registerCategoryRoutes } from "./routes/categories.js";
 import { registerServerRoutes } from "./routes/servers.js";
 import { registerTerminalRoutes } from "./routes/terminals.js";
 import { TerminalBroker } from "./services/terminal-broker.js";
@@ -52,6 +53,10 @@ export async function buildApp(env: ServerEnv) {
   await app.register(async (instance) => {
     await registerSettingsRoutes(instance, env);
   }, { prefix: `${env.appBasePath}/api/settings` });
+
+  await app.register(async (instance) => {
+    await registerCategoryRoutes(instance);
+  }, { prefix: `${env.appBasePath}/api/categories` });
 
   await app.register(async (instance) => {
     await registerServerRoutes(instance, env);

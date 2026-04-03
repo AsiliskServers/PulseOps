@@ -2,9 +2,14 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { NavLink, Outlet } from "react-router-dom";
 import { logout } from "../api/auth";
+import { listCategories } from "../api/categories";
 import { listServers } from "../api/servers";
 import { buildDashboardSummary } from "../lib/presentation";
-import { SERVERS_QUERY_REFETCH_INTERVAL_MS, SERVERS_QUERY_STALE_TIME_MS } from "../lib/query";
+import {
+  CATEGORIES_QUERY_STALE_TIME_MS,
+  SERVERS_QUERY_REFETCH_INTERVAL_MS,
+  SERVERS_QUERY_STALE_TIME_MS,
+} from "../lib/query";
 
 function LayoutLink({ to, label }: { to: string; label: string }) {
   return (
@@ -29,6 +34,11 @@ export function AppLayout() {
     () => buildDashboardSummary(serversQuery.data ?? []),
     [serversQuery.data]
   );
+  const categoriesQuery = useQuery({
+    queryKey: ["categories"],
+    queryFn: listCategories,
+    staleTime: CATEGORIES_QUERY_STALE_TIME_MS,
+  });
 
   const logoutMutation = useMutation({
     mutationFn: logout,
@@ -74,6 +84,28 @@ export function AppLayout() {
               <span>Jobs</span>
               <strong>{summary.queuedJobCount}</strong>
             </div>
+          </div>
+        </section>
+
+        <section className="sidebar-panel">
+          <p className="section-kicker">Categories</p>
+          <div className="sidebar-category-list">
+            {(categoriesQuery.data ?? []).length === 0 ? (
+              <p className="sidebar-category-empty">Aucune categorie</p>
+            ) : (
+              (categoriesQuery.data ?? []).map((category) => (
+                <NavLink
+                  key={category.id}
+                  to={`/servers/categories/${category.id}`}
+                  className={({ isActive }) =>
+                    `sidebar-category-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  <span>{category.name}</span>
+                  <strong>{category.serverCount}</strong>
+                </NavLink>
+              ))
+            )}
           </div>
         </section>
 

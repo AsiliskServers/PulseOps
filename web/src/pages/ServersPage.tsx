@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { listCategories } from "../api/categories";
 import { listServers, queueBatchJobs } from "../api/servers";
 import {
   buildDashboardSummary,
@@ -8,7 +9,11 @@ import {
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
-import { SERVERS_QUERY_REFETCH_INTERVAL_MS, SERVERS_QUERY_STALE_TIME_MS } from "../lib/query";
+import {
+  CATEGORIES_QUERY_STALE_TIME_MS,
+  SERVERS_QUERY_REFETCH_INTERVAL_MS,
+  SERVERS_QUERY_STALE_TIME_MS,
+} from "../lib/query";
 
 function TerminalIcon() {
   return (
@@ -46,50 +51,52 @@ const stateOrder = {
   ok: 3,
 } as const;
 
+type OrderedTone = keyof typeof stateOrder;
+
 const sortLabels: Record<SortField, Record<SortMode, string>> = {
   name: {
     default: "Normal",
     asc: "A-Z",
     desc: "Z-A",
-    priority: "Priorité",
+    priority: "Priorite",
     reverse: "Inverse",
-    recent: "Récent",
+    recent: "Recent",
     old: "Vieux",
   },
   serverState: {
     default: "Normal",
     asc: "A-Z",
     desc: "Z-A",
-    priority: "Priorité",
+    priority: "Priorite",
     reverse: "Inverse",
-    recent: "Récent",
+    recent: "Recent",
     old: "Vieux",
   },
   agentState: {
     default: "Normal",
     asc: "A-Z",
     desc: "Z-A",
-    priority: "Priorité",
+    priority: "Priorite",
     reverse: "Inverse",
-    recent: "Récent",
+    recent: "Recent",
     old: "Vieux",
   },
   environment: {
     default: "Normal",
     asc: "A-Z",
     desc: "Z-A",
-    priority: "Priorité",
+    priority: "Priorite",
     reverse: "Inverse",
-    recent: "Récent",
+    recent: "Recent",
     old: "Vieux",
   },
   lastSeenAt: {
     default: "Normal",
     asc: "A-Z",
     desc: "Z-A",
-    priority: "Priorité",
+    priority: "Priorite",
     reverse: "Inverse",
-    recent: "Récent",
+    recent: "Recent",
     old: "Vieux",
   },
 };
@@ -98,6 +105,10 @@ function compareDateStrings(left: string | null, right: string | null) {
   const leftValue = left ? new Date(left).getTime() : 0;
   const rightValue = right ? new Date(right).getTime() : 0;
   return leftValue - rightValue;
+}
+
+function compareTone(left: OrderedTone, right: OrderedTone) {
+  return stateOrder[left] - stateOrder[right];
 }
 
 function nextSortMode(field: SortField, mode: SortMode): SortMode {
@@ -120,6 +131,7 @@ function nextSortMode(field: SortField, mode: SortMode): SortMode {
 
 export function ServersPage() {
   const navigate = useNavigate();
+  const { categoryId } = useParams();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [batchAction, setBatchAction] = useState<BatchAction | null>(null);
@@ -135,22 +147,34 @@ export function ServersPage() {
     refetchInterval: SERVERS_QUERY_REFETCH_INTERVAL_MS,
   });
 
-  const summary = useMemo(
-    () => buildDashboardSummary(serversQuery.data ?? []),
-    [serversQuery.data]
-  );
+  const categoriesQuery = useQuery({
+    queryKey: ["categories"],
+    queryFn: listCategories,
+    staleTime: CATEGORIES_QUERY_STALE_TIME_MS,
+  });
+
+  const selectedCategory =
+    categoriesQuery.data?.find((category) => category.id === categoryId) ?? null;
 
   const filteredServers = useMemo(
     () =>
       (serversQuery.data ?? []).filter((server) => {
-      const haystack =
-        `${server.name} ${server.environment} ${server.hostname ?? ""} ${
-          server.osName ?? ""
-        } ${server.agentVersion ?? ""}`.toLowerCase();
-      return haystack.includes(deferredSearch);
+        if (categoryId && !server.categories.some((category) => category.id === categoryId)) {
+          return false;
+        }
+
+        const haystack =
+          `${server.name} ${server.environment} ${server.hostname ?? ""} ${
+            server.osName ?? ""
+          } ${server.agentVersion ?? ""} ${server.categories
+            .map((category) => category.name)
+            .join(" ")}`.toLowerCase();
+        return haystack.includes(deferredSearch);
       }),
-    [deferredSearch, serversQuery.data]
+    [categoryId, deferredSearch, serversQuery.data]
   );
+
+  const summary = useMemo(() => buildDashboardSummary(filteredServers), [filteredServers]);
 
   const servers = useMemo(
     () =>
@@ -182,12 +206,12 @@ export function ServersPage() {
               comparison *= -1;
             }
           } else if (sortField === "serverState") {
-            comparison = stateOrder[left.state.tone] - stateOrder[right.state.tone];
+            comparison = compareTone(left.state.tone, right.state.tone);
             if (sortMode === "reverse") {
               comparison *= -1;
             }
           } else if (sortField === "agentState") {
-            comparison = stateOrder[left.agentState.tone] - stateOrder[right.agentState.tone];
+            comparison = compareTone(left.agentState.tone, right.agentState.tone);
             if (sortMode === "reverse") {
               comparison *= -1;
             }
@@ -222,6 +246,7 @@ export function ServersPage() {
       setSelectedIds([]);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["servers"] }),
+        queryClient.invalidateQueries({ queryKey: ["categories"] }),
       ]);
     },
     onError: () => {
@@ -277,25 +302,31 @@ export function ServersPage() {
 
   const topError =
     (serversQuery.error instanceof Error && serversQuery.error.message) ||
+    (categoriesQuery.error instanceof Error && categoriesQuery.error.message) ||
     (batchMutation.error instanceof Error && batchMutation.error.message) ||
     null;
+
+  const headingTitle = selectedCategory ? `Categorie ${selectedCategory.name}` : "Inventaire";
+  const headingCopy = selectedCategory
+    ? `Vue filtree sur les serveurs classes dans ${selectedCategory.name}.`
+    : "Liste detaillee, etat courant et acces rapide a chaque fiche.";
 
   return (
     <div className="page-column">
       <section className="page-header panel">
         <div className="page-heading">
           <p className="section-kicker">Parc</p>
-          <h2>Inventaire serveurs</h2>
-          <p className="page-copy">Liste détaillée, état courant et accès rapide à chaque fiche.</p>
+          <h2>{selectedCategory ? "Serveurs par categorie" : "Inventaire serveurs"}</h2>
+          <p className="page-copy">{headingCopy}</p>
         </div>
 
         <div className="page-header-side compact-stats">
           <div className="hero-stat">
-            <span>À jour</span>
+            <span>A jour</span>
             <strong>{summary.upToDateCount}</strong>
           </div>
           <div className="hero-stat">
-            <span>Sécurité</span>
+            <span>Securite</span>
             <strong>{summary.securityUpdateCount}</strong>
           </div>
         </div>
@@ -304,8 +335,8 @@ export function ServersPage() {
       <section className="panel">
         <div className="panel-header">
           <div>
-            <p className="section-kicker">Serveurs</p>
-            <h2>Inventaire</h2>
+            <p className="section-kicker">{selectedCategory ? "Categorie" : "Serveurs"}</p>
+            <h2>{headingTitle}</h2>
           </div>
 
           <label className="search-field" htmlFor="serversSearchInput">
@@ -332,10 +363,10 @@ export function ServersPage() {
             />
             <span>
               {selectedIds.length > 0
-                ? `${selectedIds.length} serveur${selectedIds.length > 1 ? "s" : ""} sélectionné${
+                ? `${selectedIds.length} serveur${selectedIds.length > 1 ? "s" : ""} selectionne${
                     selectedIds.length > 1 ? "s" : ""
                   }`
-                : "Sélectionner les serveurs visibles"}
+                : "Selectionner les serveurs visibles"}
             </span>
           </label>
 
@@ -348,7 +379,7 @@ export function ServersPage() {
             >
               {batchMutation.isPending && batchAction === "refresh"
                 ? "Refresh..."
-                : "Refresh sélection"}
+                : "Refresh selection"}
             </button>
             <button
               className="primary-button"
@@ -358,7 +389,7 @@ export function ServersPage() {
             >
               {batchMutation.isPending && batchAction === "upgrade"
                 ? "Upgrade..."
-                : "Upgrade sélection"}
+                : "Upgrade selection"}
             </button>
             <button
               className="ghost-button"
@@ -367,8 +398,8 @@ export function ServersPage() {
               disabled={!hasSelection || batchMutation.isPending}
             >
               {batchMutation.isPending && batchAction === "agent_update"
-                ? "MàJ agent..."
-                : "Mettre à jour l'agent"}
+                ? "Maj agent..."
+                : "Mettre a jour l'agent"}
             </button>
           </div>
         </div>
@@ -384,7 +415,7 @@ export function ServersPage() {
             type="button"
             onClick={() => cycleSort("serverState")}
           >
-            <span>État</span>
+            <span>Etat</span>
             <small>{getSortLabel("serverState")}</small>
           </button>
           <button
@@ -392,7 +423,7 @@ export function ServersPage() {
             type="button"
             onClick={() => cycleSort("agentState")}
           >
-            <span>État agent</span>
+            <span>Etat agent</span>
             <small>{getSortLabel("agentState")}</small>
           </button>
           <button
@@ -416,7 +447,11 @@ export function ServersPage() {
 
         <div className="server-table">
           {servers.length === 0 ? (
-            <div className="empty-state">Aucun serveur ne correspond à ce filtre.</div>
+            <div className="empty-state">
+              {selectedCategory
+                ? "Aucun serveur dans cette categorie avec le filtre actuel."
+                : "Aucun serveur ne correspond a ce filtre."}
+            </div>
           ) : (
             servers.map(({ server, state, agentState }) => {
               const canOpenTerminal = Boolean(server.agentId && server.isActive);
@@ -429,61 +464,61 @@ export function ServersPage() {
                     selectedIds.includes(server.id) ? "selected" : ""
                   }`}
                 >
-                <label className="row-check">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(server.id)}
-                    onChange={(event) => toggleServerSelection(server.id, event.target.checked)}
-                  />
-                </label>
+                  <label className="row-check">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(server.id)}
+                      onChange={(event) => toggleServerSelection(server.id, event.target.checked)}
+                    />
+                  </label>
 
-                <div>
-                  <Link className="table-name-link" to={`/servers/${server.id}`}>
-                    <strong>{server.name}</strong>
-                  </Link>
-                  <p>{server.hostname ?? "Hostname inconnu"}</p>
-                </div>
+                  <div>
+                    <Link className="table-name-link" to={`/servers/${server.id}`}>
+                      <strong>{server.name}</strong>
+                    </Link>
+                    <p>{server.hostname ?? "Hostname inconnu"}</p>
+                  </div>
 
-                <div className="table-stack">
-                  <span className={`server-badge ${state.tone}`}>{state.label}</span>
-                  <small>{server.latestSnapshot?.upgradableCount ?? 0} update(s)</small>
-                </div>
+                  <div className="table-stack">
+                    <span className={`server-badge ${state.tone}`}>{state.label}</span>
+                    <small>{server.latestSnapshot?.upgradableCount ?? 0} update(s)</small>
+                  </div>
 
-                <div className="table-stack">
-                  <span className={`server-badge ${agentState.tone}`}>{agentState.label}</span>
-                  <small>{server.agentVersion ?? "Version inconnue"}</small>
-                </div>
+                  <div className="table-stack">
+                    <span className={`server-badge ${agentState.tone}`}>{agentState.label}</span>
+                    <small>{server.agentVersion ?? "Version inconnue"}</small>
+                  </div>
 
-                <div>
-                  <span className="server-badge neutral">{server.environment}</span>
-                </div>
+                  <div>
+                    <span className="server-badge neutral">{server.environment}</span>
+                  </div>
 
-                <div className="table-ssh">
-                  <button
-                    className="ghost-button small ssh-launch-button"
-                    type="button"
-                    onClick={() => {
-                      navigate(`/servers/${server.id}?terminal=1`);
-                    }}
-                    disabled={!canOpenTerminal}
-                    aria-label="Ouvrir le terminal via l'agent"
-                    title={sshCommand ?? "Configurer un hôte SSH pour ce serveur"}
-                  >
-                    <TerminalIcon />
-                  </button>
-                </div>
+                  <div className="table-ssh">
+                    <button
+                      className="ghost-button small ssh-launch-button"
+                      type="button"
+                      onClick={() => {
+                        navigate(`/servers/${server.id}?terminal=1`);
+                      }}
+                      disabled={!canOpenTerminal}
+                      aria-label="Ouvrir le terminal via l'agent"
+                      title={sshCommand ?? "Configurer un hote SSH pour ce serveur"}
+                    >
+                      <TerminalIcon />
+                    </button>
+                  </div>
 
-                <div className="table-row-side">
-                  <span>{formatDate(server.lastSeenAt)}</span>
-                  <small
-                    className={`table-jobs-indicator ${
-                      server.pendingJobsCount > 0 ? "live" : "idle"
-                    }`}
-                  >
-                    <span className="table-jobs-dot" aria-hidden="true" />
-                    <span>{server.pendingJobsCount} jobs</span>
-                  </small>
-                </div>
+                  <div className="table-row-side">
+                    <span>{formatDate(server.lastSeenAt)}</span>
+                    <small
+                      className={`table-jobs-indicator ${
+                        server.pendingJobsCount > 0 ? "live" : "idle"
+                      }`}
+                    >
+                      <span className="table-jobs-dot" aria-hidden="true" />
+                      <span>{server.pendingJobsCount} jobs</span>
+                    </small>
+                  </div>
                 </div>
               );
             })

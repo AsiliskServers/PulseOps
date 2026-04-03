@@ -57,6 +57,7 @@ export default function App() {
             <Route index element={<Navigate to="/overview" replace />} />
             <Route path="/overview" element={<OverviewPage />} />
             <Route path="/servers" element={<ServersPage />} />
+            <Route path="/servers/categories/:categoryId" element={<ServersPage />} />
             <Route path="/servers/:serverId" element={<ServerDetailPage />} />
             <Route path="/agents" element={<AgentsPage />} />
           </Route>

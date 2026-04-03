@@ -39,6 +39,15 @@ export type Job = {
   triggeredByUserId: string;
 };
 
+export type Category = {
+  id: string;
+  name: string;
+};
+
+export type CategorySummary = Category & {
+  serverCount: number;
+};
+
 export type ServerSummary = {
   id: string;
   name: string;
@@ -58,6 +67,7 @@ export type ServerSummary = {
   connectivityStatus: "online" | "stale" | "offline" | string;
   createdAt: string;
   updatedAt: string;
+  categories: Category[];
   latestSnapshot: ServerSnapshot | null;
   latestJob: Job | null;
   pendingJobsCount: number;
@@ -69,12 +79,13 @@ export type ServerDetail = ServerSummary & {
 };
 
 export type ServerPayload = {
-  name: string;
-  environment: "production" | "staging" | "internal" | "other";
+  name?: string;
+  environment?: "production" | "staging" | "internal" | "other";
   notes?: string;
   isActive?: boolean;
   sshHost?: string;
   sshPort?: number;
+  categoryIds?: string[];
 };
 
 export type EnrollmentSettings = {

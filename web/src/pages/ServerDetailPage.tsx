@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { createCategory, listCategories } from "../api/categories";
 import {
   clearServerHistory,
   deleteServer,
@@ -17,6 +18,7 @@ import {
   resolveAgentVersionState,
   resolveServerState,
 } from "../lib/presentation";
+import { CATEGORIES_QUERY_STALE_TIME_MS } from "../lib/query";
 import { resolveSshHost, resolveSshPort } from "../lib/ssh";
 import type { Job, ServerDetail, ServerPayload } from "../types";
 
@@ -112,6 +114,8 @@ export function ServerDetailPage() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   async function refreshServerData(options: { includeDetail?: boolean } = {}) {
     const includeDetail = options.includeDetail ?? true;
@@ -140,11 +144,21 @@ export function ServerDetailPage() {
     },
   });
 
+  const categoriesQuery = useQuery({
+    queryKey: ["categories"],
+    queryFn: listCategories,
+    staleTime: CATEGORIES_QUERY_STALE_TIME_MS,
+  });
+
   const server = detailQuery.data;
 
   useEffect(() => {
     setNotesDraft(server?.notes ?? "");
   }, [server?.id, server?.notes]);
+
+  useEffect(() => {
+    setSelectedCategoryIds(server?.categories.map((category) => category.id) ?? []);
+  }, [server?.categories, server?.id]);
 
   const updateMutation = useMutation({
     mutationFn: (payload: ServerPayload) => updateServer(serverId!, payload),
@@ -208,6 +222,47 @@ export function ServerDetailPage() {
     },
   });
 
+  const categoriesMutation = useMutation({
+    mutationFn: async (categoryIds: string[]) => {
+      if (!server) {
+        throw new Error("Serveur introuvable");
+      }
+
+      return updateServer(serverId!, {
+        categoryIds,
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        refreshServerData(),
+        queryClient.invalidateQueries({ queryKey: ["categories"] }),
+      ]);
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const category = await createCategory(name);
+      const nextCategoryIds = Array.from(new Set([...selectedCategoryIds, category.id]));
+      await updateServer(serverId!, { categoryIds: nextCategoryIds });
+      return category;
+    },
+    onSuccess: async (category) => {
+      setNewCategoryName("");
+      setSelectedCategoryIds((current) => Array.from(new Set([...current, category.id])));
+      await Promise.all([
+        refreshServerData(),
+        queryClient.invalidateQueries({ queryKey: ["categories"] }),
+      ]);
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+
   const state = server ? resolveServerState(server) : null;
   const agentState = server ? resolveAgentVersionState(server) : null;
   const liveJob =
@@ -220,11 +275,16 @@ export function ServerDetailPage() {
     : "Aucun agent actif n'est disponible pour ce serveur";
   const hasHistory = Boolean(server?.latestSnapshot) || (server?.recentJobs.length ?? 0) > 0;
   const notesDirty = notesDraft !== (server?.notes ?? "");
+  const categorySelectionDirty =
+    selectedCategoryIds.join("|") !== (server?.categories.map((category) => category.id) ?? []).join("|");
   const agentUpdateLive = liveJob?.type === "agent_update";
   const topError =
     (detailQuery.error instanceof Error && detailQuery.error.message) ||
+    (categoriesQuery.error instanceof Error && categoriesQuery.error.message) ||
     (updateMutation.error instanceof Error && updateMutation.error.message) ||
     (notesMutation.error instanceof Error && notesMutation.error.message) ||
+    (categoriesMutation.error instanceof Error && categoriesMutation.error.message) ||
+    (createCategoryMutation.error instanceof Error && createCategoryMutation.error.message) ||
     (refreshMutation.error instanceof Error && refreshMutation.error.message) ||
     (upgradeMutation.error instanceof Error && upgradeMutation.error.message) ||
     (agentUpdateMutation.error instanceof Error && agentUpdateMutation.error.message) ||
@@ -242,6 +302,14 @@ export function ServerDetailPage() {
     }
 
     setSearchParams(nextSearchParams, { replace: true });
+  }
+
+  function toggleCategory(categoryId: string) {
+    setSelectedCategoryIds((current) =>
+      current.includes(categoryId)
+        ? current.filter((id) => id !== categoryId)
+        : [...current, categoryId]
+    );
   }
 
   if (detailQuery.isLoading) {
@@ -630,6 +698,86 @@ export function ServerDetailPage() {
                 </button>
               </div>
             </form>
+          </section>
+
+          <section className="panel">
+            <div className="panel-header">
+              <div>
+                <p className="section-kicker">Categories</p>
+                <h3>Classement</h3>
+              </div>
+            </div>
+
+            <div className="category-manager">
+              <div className="category-chip-list">
+                {(categoriesQuery.data ?? []).length === 0 ? (
+                  <div className="empty-state">Aucune categorie creee pour le moment.</div>
+                ) : (
+                  (categoriesQuery.data ?? []).map((category) => {
+                    const active = selectedCategoryIds.includes(category.id);
+                    return (
+                      <button
+                        key={category.id}
+                        className={`category-chip ${active ? "active" : ""}`}
+                        type="button"
+                        onClick={() => toggleCategory(category.id)}
+                      >
+                        <span>{category.name}</span>
+                        <strong>{category.serverCount}</strong>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="inline-actions">
+                <button
+                  className="ghost-button small"
+                  type="button"
+                  onClick={() =>
+                    setSelectedCategoryIds(server.categories.map((category) => category.id))
+                  }
+                  disabled={!categorySelectionDirty || categoriesMutation.isPending}
+                >
+                  Reinitialiser
+                </button>
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={() => categoriesMutation.mutate(selectedCategoryIds)}
+                  disabled={!categorySelectionDirty || categoriesMutation.isPending}
+                >
+                  {categoriesMutation.isPending ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </div>
+
+              <form
+                className="category-create-row"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const normalizedName = newCategoryName.trim();
+                  if (normalizedName.length === 0 || createCategoryMutation.isPending) {
+                    return;
+                  }
+
+                  createCategoryMutation.mutate(normalizedName);
+                }}
+              >
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(event) => setNewCategoryName(event.target.value)}
+                  placeholder="Creer une categorie"
+                />
+                <button
+                  className="ghost-button"
+                  type="submit"
+                  disabled={newCategoryName.trim().length === 0 || createCategoryMutation.isPending}
+                >
+                  {createCategoryMutation.isPending ? "Creation..." : "Ajouter"}
+                </button>
+              </form>
+            </div>
           </section>
             </aside>
           </section>

@@ -35,6 +35,15 @@ const detailJobSelect = {
   errorMessage: true,
 } satisfies Prisma.JobSelect;
 
+const categoryLinkSelect = {
+  category: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+} satisfies Prisma.ServerCategorySelect;
+
 export const serverListInclude = {
   id: true,
   name: true,
@@ -51,6 +60,14 @@ export const serverListInclude = {
   lastReportAt: true,
   createdAt: true,
   updatedAt: true,
+  categories: {
+    orderBy: {
+      category: {
+        name: "asc" as const,
+      },
+    },
+    select: categoryLinkSelect,
+  },
   snapshots: {
     orderBy: {
       lastCheckAt: "desc" as const,
@@ -115,6 +132,13 @@ type JobLike = {
   finishedAt?: Date | null;
   outputPreview?: string | null;
   errorMessage?: string | null;
+};
+
+type CategoryLinkLike = {
+  category: {
+    id: string;
+    name: string;
+  };
 };
 
 type SerializeServerOptions = {
@@ -202,6 +226,10 @@ export function serializeServer(
     connectivityStatus: deriveConnectivityStatus(server.lastSeenAt, env),
     createdAt: server.createdAt.toISOString(),
     updatedAt: server.updatedAt.toISOString(),
+    categories: server.categories.map((link: CategoryLinkLike) => ({
+      id: link.category.id,
+      name: link.category.name,
+    })),
     latestSnapshot: serializeSnapshot(server.snapshots[0] as SnapshotLike | undefined),
     latestJob: serializeJob(jobs[0]),
     pendingJobsCount,

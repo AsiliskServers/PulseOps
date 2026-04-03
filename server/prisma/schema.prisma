@@ -43,10 +43,30 @@ model Server {
   updatedAt            DateTime         @updatedAt
   snapshots            ServerSnapshot[]
   jobs                 Job[]
+  categories           ServerCategory[]
 
   @@index([createdAt])
   @@index([lastSeenAt])
   @@index([lastReportAt])
+}
+
+model Category {
+  id        String           @id @default(cuid())
+  name      String           @unique
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  servers   ServerCategory[]
+}
+
+model ServerCategory {
+  serverId   String
+  categoryId String
+  createdAt  DateTime @default(now())
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([serverId, categoryId])
+  @@index([categoryId])
 }
 
 model ServerSnapshot {

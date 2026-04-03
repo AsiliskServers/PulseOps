@@ -27,6 +27,17 @@ function parseCreatePayload(body: unknown) {
     throw new Error("Invalid request body");
   }
 
+  const categoryIds = Array.isArray(body.categoryIds)
+    ? Array.from(
+        new Set(
+          body.categoryIds
+            .filter((value): value is string => typeof value === "string")
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0)
+        )
+      )
+    : [];
+
   return {
     name: readRequiredString(body, "name", "name"),
     environment: validateEnvironment(readRequiredString(body, "environment", "environment")),
@@ -34,6 +45,7 @@ function parseCreatePayload(body: unknown) {
     isActive: readOptionalBoolean(body, "isActive") ?? true,
     sshHost: readOptionalString(body, "sshHost"),
     sshPort: readOptionalInteger(body, "sshPort", { min: 1, max: 65535 }) ?? 22,
+    categoryIds,
   };
 }
 
@@ -45,6 +57,18 @@ function buildCreateServerData(payload: ReturnType<typeof parseCreatePayload>) {
     isActive: payload.isActive,
     sshHost: payload.sshHost,
     sshPort: payload.sshPort,
+    categories:
+      payload.categoryIds.length > 0
+        ? {
+            create: payload.categoryIds.map((categoryId) => ({
+              category: {
+                connect: {
+                  id: categoryId,
+                },
+              },
+            })),
+          }
+        : undefined,
   };
 }
 
@@ -56,6 +80,19 @@ function buildUpdateServerData(payload: ReturnType<typeof parseUpdatePayload>) {
     isActive: payload.isActive,
     sshHost: payload.sshHost,
     sshPort: payload.sshPort,
+    categories:
+      payload.categoryIds === undefined
+        ? undefined
+        : {
+            deleteMany: {},
+            create: payload.categoryIds.map((categoryId) => ({
+              category: {
+                connect: {
+                  id: categoryId,
+                },
+              },
+            })),
+          },
   };
 }
 
@@ -65,6 +102,22 @@ function parseUpdatePayload(body: unknown) {
   }
 
   const environment = readOptionalString(body, "environment");
+  const categoryIds = Array.isArray(body.categoryIds)
+    ? Array.from(
+        new Set(
+          body.categoryIds
+            .filter((value): value is string => typeof value === "string")
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0)
+        )
+      )
+    : body.categoryIds === undefined
+      ? undefined
+      : null;
+
+  if (categoryIds === null) {
+    throw new Error("categoryIds must be an array of category ids");
+  }
 
   return {
     name: readOptionalString(body, "name"),
@@ -75,6 +128,7 @@ function parseUpdatePayload(body: unknown) {
     sshHost:
       typeof body.sshHost === "string" ? body.sshHost.trim() || null : undefined,
     sshPort: readOptionalInteger(body, "sshPort", { min: 1, max: 65535 }),
+    categoryIds,
   };
 }
 
