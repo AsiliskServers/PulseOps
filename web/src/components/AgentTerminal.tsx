@@ -96,6 +96,21 @@ function isPinnedToBottom(terminal: Terminal) {
   return buffer.viewportY >= buffer.baseY;
 }
 
+function scheduleAnimationFrames(count: number, callback: () => void) {
+  let remaining = count;
+
+  const tick = () => {
+    callback();
+    remaining -= 1;
+
+    if (remaining > 0) {
+      window.requestAnimationFrame(tick);
+    }
+  };
+
+  window.requestAnimationFrame(tick);
+}
+
 export function AgentTerminal({ serverId, serverName, onClose }: Props) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -142,6 +157,35 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       terminal.writeln(`[PulseOps] Ouverture du terminal pour ${serverName}`);
       terminal.writeln("[PulseOps] Attente de l'agent...");
     }
+
+    const fitTerminal = (sessionId?: string | null) => {
+      const fit = fitAddonRef.current;
+      if (!fit) {
+        return;
+      }
+
+      fit.fit();
+      const size = clampTerminalSize({
+        cols: terminal.cols,
+        rows: terminal.rows,
+      });
+      const sizeKey = `${size.cols}x${size.rows}`;
+
+      if (lastSentSizeRef.current === sizeKey) {
+        return;
+      }
+
+      lastSentSizeRef.current = sizeKey;
+
+      if (!sessionId) {
+        return;
+      }
+
+      void resizeTerminalSession(sessionId, size).catch((cause) => {
+        const message = cause instanceof Error ? cause.message : "Impossible de redimensionner le terminal";
+        setError(resolveTerminalErrorMessage(message));
+      });
+    };
 
     const scheduleFlush = (delay: number) => {
       if (flushTimerRef.current !== null) {
@@ -208,36 +252,21 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       }
 
       resizeTimerRef.current = window.setTimeout(() => {
-        const sessionId = sessionRef.current?.sessionId;
-        const fit = fitAddonRef.current;
-
-        if (!sessionId || !fit) {
-          return;
-        }
-
-        fit.fit();
-        const size = clampTerminalSize({
-          cols: terminal.cols,
-          rows: terminal.rows,
-        });
-        const sizeKey = `${size.cols}x${size.rows}`;
-
-        if (lastSentSizeRef.current === sizeKey) {
-          return;
-        }
-
-        lastSentSizeRef.current = sizeKey;
-
-        void resizeTerminalSession(sessionId, size).catch((cause) => {
-          const message = cause instanceof Error ? cause.message : "Impossible de redimensionner le terminal";
-          setError(resolveTerminalErrorMessage(message));
-        });
-      }, 40);
+        fitTerminal(sessionRef.current?.sessionId);
+      }, 20);
     });
 
     if (surfaceRef.current) {
       resizeObserver.observe(surfaceRef.current);
     }
+
+    const viewport = window.visualViewport;
+    const handleViewportResize = () => {
+      fitTerminal(sessionRef.current?.sessionId);
+    };
+
+    viewport?.addEventListener("resize", handleViewportResize);
+    window.addEventListener("resize", handleViewportResize);
 
     const bindStream = (session: TerminalSessionResponse) => {
       const stream = new EventSource(getTerminalStreamUrl(session.sessionId));
@@ -317,14 +346,10 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
 
         bindStream(session);
 
-        fitAddon.fit();
-        await resizeTerminalSession(
-          session.sessionId,
-          clampTerminalSize({
-            cols: terminal.cols,
-            rows: terminal.rows,
-          })
-        );
+        fitTerminal(session.sessionId);
+        scheduleAnimationFrames(3, () => {
+          fitTerminal(session.sessionId);
+        });
 
         if (inputBufferRef.current) {
           const pending = inputBufferRef.current;
@@ -350,6 +375,8 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       }
 
       resizeObserver.disconnect();
+      viewport?.removeEventListener("resize", handleViewportResize);
+      window.removeEventListener("resize", handleViewportResize);
       streamRef.current?.close();
       terminal.dispose();
 
