@@ -113,6 +113,7 @@ function scheduleAnimationFrames(count: number, callback: () => void) {
 
 export function AgentTerminal({ serverId, serverName, onClose }: Props) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -256,8 +257,8 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       }, 20);
     });
 
-    if (surfaceRef.current) {
-      resizeObserver.observe(surfaceRef.current);
+    if (frameRef.current) {
+      resizeObserver.observe(frameRef.current);
     }
 
     const viewport = window.visualViewport;
@@ -475,7 +476,9 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       {error ? <div className="alert error">{error}</div> : null}
 
       <div ref={surfaceRef} className="agent-terminal-surface">
-        <div ref={canvasRef} className="agent-terminal-canvas" />
+        <div ref={frameRef} className="agent-terminal-frame">
+          <div ref={canvasRef} className="agent-terminal-canvas" />
+        </div>
       </div>
 
       <footer className="agent-terminal-footer">
