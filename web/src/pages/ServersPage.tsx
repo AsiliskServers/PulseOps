@@ -456,8 +456,13 @@ export function ServersPage() {
             </div>
           ) : (
             servers.map(({ server, state, agentState }) => {
-              const canOpenTerminal = Boolean(server.agentId && server.isActive);
-              const sshCommand = canOpenTerminal ? "Ouvrir le terminal root via l'agent" : null;
+              const shellSupported = server.shellAccessEnabled !== false;
+              const canOpenTerminal = Boolean(server.agentId && server.isActive && shellSupported);
+              const sshCommand = canOpenTerminal
+                ? "Ouvrir le terminal root via l'agent"
+                : shellSupported
+                  ? null
+                  : "Shell desactive sur ce type d'agent";
 
               return (
                 <div

@@ -76,20 +76,21 @@ func runEnroll(args []string) error {
 }
 
 func enrollAgent(cfg config.Config) (agent.EnrollResponse, error) {
-	meta, err := platform.CollectMetadata(version, cfg.NameOverride)
+	meta, err := platform.CollectMetadata(version, cfg.NameOverride, cfg.ShellAccessEnabled)
 	if err != nil {
 		return agent.EnrollResponse{}, err
 	}
 
 	client := agent.NewClient(cfg.ServerURL)
 	enrollment, err := client.Enroll(context.Background(), agent.EnrollRequest{
-		EnrollmentToken: cfg.EnrollmentToken,
-		Hostname:        meta.Hostname,
-		Environment:     cfg.Environment,
-		AgentVersion:    meta.AgentVersion,
-		OSName:          meta.OSName,
-		OSVersion:       meta.OSVersion,
-		Name:            meta.DisplayName,
+		EnrollmentToken:    cfg.EnrollmentToken,
+		Hostname:           meta.Hostname,
+		Environment:        cfg.Environment,
+		AgentVersion:       meta.AgentVersion,
+		OSName:             meta.OSName,
+		OSVersion:          meta.OSVersion,
+		Name:               meta.DisplayName,
+		ShellAccessEnabled: cfg.ShellAccessEnabled,
 	})
 	if err != nil {
 		return agent.EnrollResponse{}, err
@@ -168,14 +169,17 @@ func runService(args []string) error {
 		}
 	}
 
-	meta, err := platform.CollectMetadata(version, cfg.NameOverride)
+	meta, err := platform.CollectMetadata(version, cfg.NameOverride, cfg.ShellAccessEnabled)
 	if err != nil {
 		return err
 	}
 
 	client := agent.NewClient(cfg.ServerURL)
-	shellManager := shell.NewManager()
-	defer shellManager.Shutdown()
+	var shellManager *shell.Manager
+	if cfg.ShellAccessEnabled {
+		shellManager = shell.NewManager()
+		defer shellManager.Shutdown()
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -276,6 +280,10 @@ func runService(args []string) error {
 	}
 
 	syncTerminals := func() error {
+		if shellManager == nil {
+			return nil
+		}
+
 		updates := shellManager.CollectUpdates()
 		updates.AgentID = currentState.AgentID
 		updates.AgentSecret = currentState.AgentSecret
@@ -293,12 +301,23 @@ func runService(args []string) error {
 	}
 
 	resetTerminalTimer := func() {
+		if shellManager == nil {
+			if !terminalTimer.Stop() {
+				select {
+				case <-terminalTimer.C:
+				default:
+				}
+			}
+			terminalTimer.Reset(24 * time.Hour)
+			return
+		}
+
 		interval := terminalSyncIdleInterval
 		if shellManager.HasActiveSessions() {
 			if time.Now().Before(terminalBurstUntil) {
 				interval = terminalSyncBurstInterval
 			} else {
-			interval = terminalSyncActiveInterval
+				interval = terminalSyncActiveInterval
 			}
 		}
 
@@ -325,8 +344,10 @@ func runService(args []string) error {
 		return nil
 	}
 
-	if err := syncTerminals(); err != nil {
-		log.Printf("initial terminal sync failed: %v", err)
+	if shellManager != nil {
+		if err := syncTerminals(); err != nil {
+			log.Printf("initial terminal sync failed: %v", err)
+		}
 	}
 	resetTerminalTimer()
 
@@ -354,8 +375,10 @@ func runService(args []string) error {
 				return nil
 			}
 		case <-terminalTimer.C:
-			if err := syncTerminals(); err != nil {
-				log.Printf("terminal sync failed: %v", err)
+			if shellManager != nil {
+				if err := syncTerminals(); err != nil {
+					log.Printf("terminal sync failed: %v", err)
+				}
 			}
 			resetTerminalTimer()
 		}

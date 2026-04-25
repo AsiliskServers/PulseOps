@@ -36,6 +36,7 @@ export async function registerTerminalRoutes(
           id: true,
           agentId: true,
           isActive: true,
+          shellAccessEnabled: true,
         },
       });
 
@@ -46,6 +47,12 @@ export async function registerTerminalRoutes(
       if (!server.isActive || !server.agentId) {
         return reply.status(409).send({
           message: "Aucun agent actif n'est disponible sur ce serveur pour ouvrir un terminal",
+        });
+      }
+
+      if (!server.shellAccessEnabled) {
+        return reply.status(409).send({
+          message: "Le shell distant est desactive sur ce type d'agent",
         });
       }
 

@@ -7,6 +7,10 @@ function buildInstallCommand(publicUrl: string, token: string) {
   return `curl -fsSL ${publicUrl}/install-agent.sh | bash -s -- --server-url ${publicUrl} --enrollment-token ${token} --environment production`;
 }
 
+function buildRestrictedInstallCommand(publicUrl: string, token: string) {
+  return `curl -fsSL ${publicUrl}/install-agent.sh | bash -s -- --server-url ${publicUrl} --enrollment-token ${token} --environment production --agent-profile appliance`;
+}
+
 function buildEnrollmentResponse(env: ServerEnv, token: string) {
   return {
     enrollmentToken: token,
@@ -15,6 +19,7 @@ function buildEnrollmentResponse(env: ServerEnv, token: string) {
     jobPollIntervalSeconds: env.agentJobPollIntervalSeconds,
     autoUpdateIntervalSeconds: env.agentAutoUpdateIntervalSeconds,
     installCommand: buildInstallCommand(env.appPublicUrl, token),
+    installCommandRestricted: buildRestrictedInstallCommand(env.appPublicUrl, token),
   };
 }
 

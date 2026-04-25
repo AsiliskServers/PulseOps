@@ -53,6 +53,7 @@ export type ServerSummary = {
   name: string;
   environment: "production" | "staging" | "internal" | "other" | string;
   isActive: boolean;
+  shellAccessEnabled?: boolean;
   agentId: string | null;
   hostname: string | null;
   sshHost: string | null;
@@ -95,4 +96,5 @@ export type EnrollmentSettings = {
   jobPollIntervalSeconds: number;
   autoUpdateIntervalSeconds: number;
   installCommand: string;
+  installCommandRestricted: string;
 };

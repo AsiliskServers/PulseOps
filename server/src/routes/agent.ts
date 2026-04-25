@@ -16,6 +16,7 @@ type AuthenticatedAgentServer = {
   osName: string | null;
   osVersion: string | null;
   agentVersion: string | null;
+  shellAccessEnabled: boolean;
   isActive: boolean;
 };
 
@@ -68,6 +69,7 @@ async function authenticateAgent(body: unknown, env: ServerEnv) {
       osName: true,
       osVersion: true,
       agentVersion: true,
+      shellAccessEnabled: true,
       isActive: true,
     },
   });
@@ -139,6 +141,7 @@ export async function registerAgentRoutes(
       const osName = readRequiredString(request.body, "osName", "osName");
       const osVersion = readRequiredString(request.body, "osVersion", "osVersion");
       const requestedName = readOptionalString(request.body, "name");
+      const shellAccessEnabled = request.body.shellAccessEnabled !== false;
       const now = new Date();
       const agentId = generateOpaqueToken("pulseops_agent");
       const agentSecret = generateOpaqueToken("pulseops_secret");
@@ -155,6 +158,7 @@ export async function registerAgentRoutes(
           osName,
           osVersion,
           agentVersion,
+          shellAccessEnabled,
           lastSeenAt: now,
         },
       });
@@ -207,6 +211,10 @@ export async function registerAgentRoutes(
             osName: readOptionalString(body, "osName") ?? server.osName,
             osVersion: readOptionalString(body, "osVersion") ?? server.osVersion,
             agentVersion: readOptionalString(body, "agentVersion") ?? server.agentVersion,
+            shellAccessEnabled:
+              typeof body.shellAccessEnabled === "boolean"
+                ? body.shellAccessEnabled
+                : server.shellAccessEnabled,
           },
         }),
         prisma.serverSnapshot.create({

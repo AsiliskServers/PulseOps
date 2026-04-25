@@ -5,6 +5,7 @@ SERVER_URL="__DEFAULT_SERVER_URL__"
 ENROLLMENT_TOKEN=""
 ENVIRONMENT="production"
 ALLOW_UPGRADE="true"
+SHELL_ACCESS_ENABLED="true"
 AUTO_UPDATE="true"
 NAME_OVERRIDE=""
 REPORT_INTERVAL="__DEFAULT_REPORT_INTERVAL__"
@@ -37,6 +38,25 @@ while [[ $# -gt 0 ]]; do
       ;;
     --allow-upgrade)
       ALLOW_UPGRADE="$2"
+      shift 2
+      ;;
+    --shell-access)
+      SHELL_ACCESS_ENABLED="$2"
+      shift 2
+      ;;
+    --agent-profile)
+      case "$2" in
+        standard)
+          SHELL_ACCESS_ENABLED="true"
+          ;;
+        appliance|infrastructure|restricted)
+          SHELL_ACCESS_ENABLED="false"
+          ;;
+        *)
+          echo "Unknown agent profile: $2" >&2
+          exit 1
+          ;;
+      esac
       shift 2
       ;;
     --auto-update)
@@ -112,6 +132,7 @@ SERVER_URL=$SERVER_URL
 ENROLLMENT_TOKEN=$ENROLLMENT_TOKEN
 ENVIRONMENT=$ENVIRONMENT
 ALLOW_UPGRADE=$ALLOW_UPGRADE
+SHELL_ACCESS_ENABLED=$SHELL_ACCESS_ENABLED
 AUTO_UPDATE=$AUTO_UPDATE
 NAME_OVERRIDE=$NAME_OVERRIDE
 REPORT_INTERVAL_SECONDS=$REPORT_INTERVAL
@@ -137,6 +158,7 @@ SERVER_URL=$SERVER_URL
 ENROLLMENT_TOKEN=
 ENVIRONMENT=$ENVIRONMENT
 ALLOW_UPGRADE=$ALLOW_UPGRADE
+SHELL_ACCESS_ENABLED=$SHELL_ACCESS_ENABLED
 AUTO_UPDATE=$AUTO_UPDATE
 NAME_OVERRIDE=$NAME_OVERRIDE
 REPORT_INTERVAL_SECONDS=$REPORT_INTERVAL

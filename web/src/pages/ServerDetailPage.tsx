@@ -269,10 +269,13 @@ export function ServerDetailPage() {
     server?.recentJobs.find(isLiveJob) ??
     (server?.latestJob && isLiveJob(server.latestJob) ? server.latestJob : null);
   const upgradablePackages = extractUpgradablePackages(server?.latestSnapshot?.outputPreview);
-  const canOpenTerminal = Boolean(server?.agentId && server.isActive);
+  const shellSupported = server?.shellAccessEnabled !== false;
+  const canOpenTerminal = Boolean(server?.agentId && server.isActive && shellSupported);
   const sshCommand = canOpenTerminal
     ? "Ouvrir le terminal root via l'agent"
-    : "Aucun agent actif n'est disponible pour ce serveur";
+    : shellSupported
+      ? "Aucun agent actif n'est disponible pour ce serveur"
+      : "Le shell distant est desactive sur ce type d'agent";
   const hasHistory = Boolean(server?.latestSnapshot) || (server?.recentJobs.length ?? 0) > 0;
   const notesDirty = notesDraft !== (server?.notes ?? "");
   const categorySelectionDirty =
@@ -498,6 +501,10 @@ export function ServerDetailPage() {
               <div className="detail-field">
                 <span>Actif</span>
                 <strong>{server.isActive ? "Oui" : "Non"}</strong>
+              </div>
+              <div className="detail-field">
+                <span>Shell distant</span>
+                <strong>{shellSupported ? "Autorise" : "Desactive"}</strong>
               </div>
             </div>
           </section>

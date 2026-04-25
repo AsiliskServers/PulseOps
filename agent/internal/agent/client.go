@@ -19,13 +19,14 @@ type Client struct {
 }
 
 type EnrollRequest struct {
-	EnrollmentToken string `json:"enrollmentToken"`
-	Hostname        string `json:"hostname"`
-	Environment     string `json:"environment"`
-	AgentVersion    string `json:"agentVersion"`
-	OSName          string `json:"osName"`
-	OSVersion       string `json:"osVersion"`
-	Name            string `json:"name,omitempty"`
+	EnrollmentToken    string `json:"enrollmentToken"`
+	Hostname           string `json:"hostname"`
+	Environment        string `json:"environment"`
+	AgentVersion       string `json:"agentVersion"`
+	OSName             string `json:"osName"`
+	OSVersion          string `json:"osVersion"`
+	Name               string `json:"name,omitempty"`
+	ShellAccessEnabled bool   `json:"shellAccessEnabled"`
 }
 
 type EnrollResponse struct {
@@ -120,18 +121,19 @@ func (client *Client) Report(
 	summary platform.Summary,
 ) error {
 	return client.doJSON(ctx, http.MethodPost, "/api/agent/report", map[string]any{
-		"agentId":        agentID,
-		"agentSecret":    agentSecret,
-		"hostname":       meta.Hostname,
-		"agentVersion":   meta.AgentVersion,
-		"osName":         meta.OSName,
-		"osVersion":      meta.OSVersion,
-		"reachable":      summary.Reachable,
-		"upgradableCount": summary.UpgradableCount,
-		"securityCount":  summary.SecurityCount,
-		"rebootRequired": summary.RebootRequired,
-		"checkedAt":      summary.CheckedAt.Format(time.RFC3339),
-		"outputPreview":  summary.OutputPreview,
+		"agentId":            agentID,
+		"agentSecret":        agentSecret,
+		"hostname":           meta.Hostname,
+		"agentVersion":       meta.AgentVersion,
+		"osName":             meta.OSName,
+		"osVersion":          meta.OSVersion,
+		"shellAccessEnabled": meta.ShellAccessEnabled,
+		"reachable":          summary.Reachable,
+		"upgradableCount":    summary.UpgradableCount,
+		"securityCount":      summary.SecurityCount,
+		"rebootRequired":     summary.RebootRequired,
+		"checkedAt":          summary.CheckedAt.Format(time.RFC3339),
+		"outputPreview":      summary.OutputPreview,
 	}, nil)
 }
 
@@ -152,12 +154,12 @@ func (client *Client) SendJobResult(
 	payload JobResultRequest,
 ) error {
 	body := map[string]any{
-		"agentId":      agentID,
-		"agentSecret":  agentSecret,
-		"status":       payload.Status,
-		"startedAt":    payload.StartedAt.Format(time.RFC3339),
+		"agentId":       agentID,
+		"agentSecret":   agentSecret,
+		"status":        payload.Status,
+		"startedAt":     payload.StartedAt.Format(time.RFC3339),
 		"outputPreview": payload.OutputPreview,
-		"errorMessage": payload.ErrorMessage,
+		"errorMessage":  payload.ErrorMessage,
 	}
 
 	if !payload.FinishedAt.IsZero() {

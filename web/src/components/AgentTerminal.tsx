@@ -81,6 +81,10 @@ function resolveTerminalErrorMessage(message: string) {
     return "Le terminal agent n'est pas encore deploye sur cette instance. Mets a jour le serveur principal puis les agents.";
   }
 
+  if (message.toLowerCase().includes("shell distant est desactive")) {
+    return "Ce serveur utilise un agent sans acces shell. Le terminal root est volontairement indisponible.";
+  }
+
   return message;
 }
 

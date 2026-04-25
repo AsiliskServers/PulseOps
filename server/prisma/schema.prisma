@@ -29,6 +29,7 @@ model Server {
   environment          String
   notes                String?
   isActive             Boolean          @default(true)
+  shellAccessEnabled   Boolean          @default(true)
   agentId              String?          @unique
   agentSecretEncrypted String?
   hostname             String?

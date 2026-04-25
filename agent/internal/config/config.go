@@ -13,6 +13,7 @@ type Config struct {
 	EnrollmentToken           string
 	Environment               string
 	AllowUpgrade              bool
+	ShellAccessEnabled        bool
 	AutoUpdate                bool
 	NameOverride              string
 	ReportIntervalSeconds     int
@@ -56,6 +57,7 @@ func Load(path string) (Config, error) {
 		EnrollmentToken:           firstNonEmpty(values["ENROLLMENT_TOKEN"], os.Getenv("ENROLLMENT_TOKEN")),
 		Environment:               firstNonEmpty(values["ENVIRONMENT"], os.Getenv("ENVIRONMENT"), "production"),
 		AllowUpgrade:              parseBool(firstNonEmpty(values["ALLOW_UPGRADE"], os.Getenv("ALLOW_UPGRADE"), "true")),
+		ShellAccessEnabled:        parseBool(firstNonEmpty(values["SHELL_ACCESS_ENABLED"], os.Getenv("SHELL_ACCESS_ENABLED"), "true")),
 		AutoUpdate:                parseBool(firstNonEmpty(values["AUTO_UPDATE"], os.Getenv("AUTO_UPDATE"), "true")),
 		NameOverride:              firstNonEmpty(values["NAME_OVERRIDE"], os.Getenv("NAME_OVERRIDE")),
 		StateFile:                 firstNonEmpty(values["STATE_FILE"], os.Getenv("STATE_FILE"), "/opt/pulseops-agent/state.json"),

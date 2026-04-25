@@ -129,6 +129,24 @@ Par defaut :
 - il poll les jobs toutes les `10 s`
 - il verifie les nouvelles releases agent toutes les `15 min`
 
+### Agent sans shell
+
+Pour les hyperviseurs, appliances ou equipements ou tu ne veux jamais ouvrir un shell root via PulseOps :
+
+```bash
+curl -fsSL https://app.asilisk.fr/pulseops/install-agent.sh | bash -s -- \
+  --server-url https://app.asilisk.fr/pulseops \
+  --enrollment-token VOTRE_TOKEN \
+  --environment production \
+  --agent-profile appliance
+```
+
+Ce profil :
+
+- conserve les reports, refresh, upgrade et mise a jour agent
+- desactive explicitement l'ouverture de shell distant
+- fait refuser toute tentative de terminal cote API et cote interface
+
 ### Supprimer proprement un agent d'une machine
 
 Sur la machine Debian cible, en `root` :

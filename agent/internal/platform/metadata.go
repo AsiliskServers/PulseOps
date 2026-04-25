@@ -7,14 +7,15 @@ import (
 )
 
 type Metadata struct {
-	Hostname     string
-	DisplayName  string
-	AgentVersion string
-	OSName       string
-	OSVersion    string
+	Hostname           string
+	DisplayName        string
+	AgentVersion       string
+	OSName             string
+	OSVersion          string
+	ShellAccessEnabled bool
 }
 
-func CollectMetadata(version string, nameOverride string) (Metadata, error) {
+func CollectMetadata(version string, nameOverride string, shellAccessEnabled bool) (Metadata, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return Metadata{}, err
@@ -27,11 +28,12 @@ func CollectMetadata(version string, nameOverride string) (Metadata, error) {
 	}
 
 	return Metadata{
-		Hostname:     hostname,
-		DisplayName:  displayName,
-		AgentVersion: version,
-		OSName:       osName,
-		OSVersion:    osVersion,
+		Hostname:           hostname,
+		DisplayName:        displayName,
+		AgentVersion:       version,
+		OSName:             osName,
+		OSVersion:          osVersion,
+		ShellAccessEnabled: shellAccessEnabled,
 	}, nil
 }
 

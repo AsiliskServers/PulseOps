@@ -6,7 +6,7 @@ import { buildDashboardSummary } from "../lib/presentation";
 import { SERVERS_QUERY_REFETCH_INTERVAL_MS, SERVERS_QUERY_STALE_TIME_MS } from "../lib/query";
 
 export function AgentsPage() {
-  const [copied, setCopied] = useState<"command" | "token" | null>(null);
+  const [copied, setCopied] = useState<"command" | "restricted-command" | "token" | null>(null);
   const queryClient = useQueryClient();
 
   const enrollmentQuery = useQuery({
@@ -32,7 +32,7 @@ export function AgentsPage() {
     },
   });
 
-  async function copyValue(value: string, kind: "command" | "token") {
+  async function copyValue(value: string, kind: "command" | "restricted-command" | "token") {
     await navigator.clipboard.writeText(value);
     setCopied(kind);
     window.setTimeout(() => setCopied(null), 1500);
@@ -164,6 +164,33 @@ export function AgentsPage() {
           </div>
 
           <pre>{enrollmentQuery.data?.installCommand ?? "Chargement..."}</pre>
+        </section>
+
+        <section className="panel">
+          <div className="panel-header">
+            <div>
+              <p className="section-kicker">Infrastructure</p>
+              <h3>Agent sans shell</h3>
+            </div>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() =>
+                enrollmentQuery.data &&
+                void copyValue(enrollmentQuery.data.installCommandRestricted, "restricted-command")
+              }
+              disabled={!enrollmentQuery.data}
+            >
+              {copied === "restricted-command" ? "Commande copiee" : "Copier"}
+            </button>
+          </div>
+
+          <p className="page-copy">
+            Profil recommande pour hyperviseurs, appliances et equipements ou l'ouverture
+            d'un shell root doit rester impossible depuis PulseOps.
+          </p>
+
+          <pre>{enrollmentQuery.data?.installCommandRestricted ?? "Chargement..."}</pre>
         </section>
       </section>
     </div>
