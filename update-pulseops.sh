@@ -1,3 +1,5 @@
+export HOME=/root
+
 #!/usr/bin/env bash
 set -euo pipefail
 

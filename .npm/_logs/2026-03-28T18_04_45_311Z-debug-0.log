@@ -1,0 +1,17 @@
+0 verbose cli /usr/bin/node /usr/bin/npm
+1 info using npm@10.9.4
+2 info using node@v22.22.0
+3 silly config load:file:/usr/lib/node_modules/npm/npmrc
+4 silly config load:file:/gestion/pulseops/.npmrc
+5 silly config load:file:/usr/etc/npmrc
+6 verbose title npm run prisma:push
+7 verbose argv "run" "prisma:push" "--workspace" "server"
+8 verbose logfile logs-max:10 dir:/gestion/pulseops/.npm/_logs/2026-03-28T18_04_45_311Z-
+9 verbose logfile /gestion/pulseops/.npm/_logs/2026-03-28T18_04_45_311Z-debug-0.log
+10 silly logfile done cleaning log files
+11 verbose cwd /gestion/pulseops
+12 verbose os Linux 6.12.74+deb13+1-amd64
+13 verbose node v22.22.0
+14 verbose npm  v10.9.4
+15 verbose exit 0
+16 info ok
