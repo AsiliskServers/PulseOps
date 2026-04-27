@@ -11,3 +11,13 @@ agent/dist/
 coverage/
 npm-debug.log*
 *.tsbuildinfo
+
+server/prisma/dev.db*
+server/dev.db*
+*.db-shm
+*.db-wal
+
+server/prisma/dev.db*
+server/dev.db*
+*.db-shm
+*.db-wal
