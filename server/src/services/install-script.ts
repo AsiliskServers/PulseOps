@@ -5,8 +5,8 @@ import { serverAssetsDir, serverSrcAssetsDir } from "../lib/paths.js";
 
 async function resolveInstallScriptPath(): Promise<string> {
   const candidates = [
-    path.join(serverAssetsDir, "install-agent.sh"),
     path.join(serverSrcAssetsDir, "install-agent.sh"),
+    path.join(serverAssetsDir, "install-agent.sh"),
   ];
 
   for (const candidate of candidates) {
