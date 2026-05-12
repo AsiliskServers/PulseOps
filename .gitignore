@@ -1,5 +1,8 @@
 node_modules/
 dist/
+.cache/
+.config/
+.npm/
 .vite/
 .turbo/
 .env
