@@ -1,1 +1,2 @@
-*.sh text eol=lf
+# Normalize text files to LF to avoid cross-platform EOL-only diffs.
+* text=auto eol=lf
