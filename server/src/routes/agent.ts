@@ -38,17 +38,22 @@ function normalizeDate(value: string | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-async function authenticateAgent(body: unknown, env: ServerEnv) {
+async function authenticateAgent(
+  body: unknown,
+  env: ServerEnv,
+  options: { useCache?: boolean } = {}
+) {
   if (!isRecord(body)) {
     throw new Error("Invalid request body");
   }
 
   const agentId = readRequiredString(body, "agentId", "agentId");
   const agentSecret = readRequiredString(body, "agentSecret", "agentSecret");
+  const useCache = options.useCache ?? true;
   const cacheKey = `${agentId}:${agentSecret}`;
   const cached = agentAuthCache.get(cacheKey);
 
-  if (cached && cached.expiresAt > Date.now() && cached.server.isActive) {
+  if (useCache && cached && cached.expiresAt > Date.now() && cached.server.isActive) {
     return {
       body,
       server: cached.server,
@@ -84,10 +89,12 @@ async function authenticateAgent(body: unknown, env: ServerEnv) {
     throw new Error("Invalid agent credentials");
   }
 
-  agentAuthCache.set(cacheKey, {
-    expiresAt: Date.now() + AGENT_AUTH_CACHE_TTL_MS,
-    server,
-  });
+  if (useCache) {
+    agentAuthCache.set(cacheKey, {
+      expiresAt: Date.now() + AGENT_AUTH_CACHE_TTL_MS,
+      server,
+    });
+  }
 
   return {
     body,
@@ -174,6 +181,20 @@ export async function registerAgentRoutes(
       const message = error instanceof Error ? error.message : "Enrollment failed";
       const status = message === "Invalid enrollment token" ? 401 : 400;
       return reply.status(status).send({ message });
+    }
+  });
+
+  app.post("/auth/check", async (request, reply) => {
+    try {
+      const { server } = await authenticateAgent(request.body, env, { useCache: false });
+
+      return reply.send({
+        ok: true,
+        serverId: server.id,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Authentication check failed";
+      return reply.status(message === "Invalid agent credentials" ? 401 : 400).send({ message });
     }
   });
 

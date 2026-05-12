@@ -120,7 +120,8 @@ Le script :
 - telecharge le bon binaire
 - cree `/opt/pulseops-agent`
 - ecrit `pulseops-agent.env`
-- lance `pulseops-agent enroll`
+- verifie l'etat agent existant si `state.json` est deja present
+- lance `pulseops-agent enroll` au premier enrollement, ou si les identifiants locaux sont rejetes par le serveur
 - installe et active `systemd`
 
 Par defaut :
@@ -179,6 +180,7 @@ Important :
 - cela ne supprime pas automatiquement l'entree du serveur dans PulseOps
 - pour nettoyer aussi le parc, supprime ensuite le serveur depuis l'interface PulseOps
 - si tu reinstalles l'agent plus tard, la machine sera reenrolee comme un nouvel agent
+- si tu veux forcer un reenrollement sans supprimer tout le dossier agent, relance le one-liner avec `--force-reenroll`
 
 ## Reverse proxy
 

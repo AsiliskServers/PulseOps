@@ -27,15 +27,28 @@ try {
   Invoke-GoBuild "amd64" (Join-Path $dist "pulseops-agent-linux-amd64")
   Invoke-GoBuild "arm64" (Join-Path $dist "pulseops-agent-linux-arm64")
 
-  @"
+  $amd64Checksum = (Get-FileHash -Algorithm SHA256 (Join-Path $dist "pulseops-agent-linux-amd64")).Hash.ToLowerInvariant()
+  $arm64Checksum = (Get-FileHash -Algorithm SHA256 (Join-Path $dist "pulseops-agent-linux-arm64")).Hash.ToLowerInvariant()
+
+  $manifest = @"
 {
   "version": "$agentVersion",
   "assets": {
     "linux-amd64": "pulseops-agent-linux-amd64",
     "linux-arm64": "pulseops-agent-linux-arm64"
+  },
+  "checksums": {
+    "pulseops-agent-linux-amd64": "$amd64Checksum",
+    "pulseops-agent-linux-arm64": "$arm64Checksum"
   }
 }
-"@ | Set-Content -NoNewline -Encoding utf8 (Join-Path $dist "latest.json")
+"@
+
+  [System.IO.File]::WriteAllText(
+    (Join-Path $dist "latest.json"),
+    $manifest,
+    [System.Text.UTF8Encoding]::new($false)
+  )
 }
 finally {
   Remove-Item Env:GOOS -ErrorAction SilentlyContinue

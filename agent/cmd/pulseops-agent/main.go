@@ -22,6 +22,8 @@ import (
 
 var version = "dev"
 
+var errInvalidLocalState = errors.New("invalid local agent state")
+
 const (
 	terminalSyncIdleInterval   = 150 * time.Millisecond
 	terminalSyncActiveInterval = 45 * time.Millisecond
@@ -31,12 +33,26 @@ const (
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatalf("usage: %s <enroll|run>", os.Args[0])
+		log.Fatalf("usage: %s <enroll|check-auth|run>", os.Args[0])
 	}
 
 	switch os.Args[1] {
 	case "enroll":
 		if err := runEnroll(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+	case "check-auth":
+		if err := runCheckAuth(os.Args[2:]); err != nil {
+			var httpErr *agent.HTTPError
+			if errors.As(err, &httpErr) && httpErr.StatusCode == 401 {
+				log.Print(err)
+				os.Exit(10)
+			}
+			if errors.Is(err, errInvalidLocalState) {
+				log.Print(err)
+				os.Exit(11)
+			}
+
 			log.Fatal(err)
 		}
 	case "run":
@@ -70,6 +86,41 @@ func runEnroll(args []string) error {
 		"serverId": enrollment.ServerID,
 		"agentId":  enrollment.AgentID,
 		"status":   "enrolled",
+	}, "", "  ")
+	fmt.Println(string(payload))
+	return nil
+}
+
+func runCheckAuth(args []string) error {
+	fs := flag.NewFlagSet("check-auth", flag.ContinueOnError)
+	configPath := fs.String("config", "", "path to agent env file")
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+
+	currentState, err := state.Load(cfg.StateFile)
+	if err != nil {
+		return fmt.Errorf("%w: %v", errInvalidLocalState, err)
+	}
+	if currentState.AgentID == "" || currentState.AgentSecret == "" {
+		return fmt.Errorf("%w: missing agentId or agentSecret", errInvalidLocalState)
+	}
+
+	client := agent.NewClient(cfg.ServerURL)
+	if err := client.CheckAuth(context.Background(), currentState.AgentID, currentState.AgentSecret); err != nil {
+		return err
+	}
+
+	payload, _ := json.MarshalIndent(map[string]string{
+		"serverId": currentState.ServerID,
+		"agentId":  currentState.AgentID,
+		"status":   "valid",
 	}, "", "  ")
 	fmt.Println(string(payload))
 	return nil

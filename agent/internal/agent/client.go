@@ -18,6 +18,23 @@ type Client struct {
 	httpClient *http.Client
 }
 
+type HTTPError struct {
+	Method     string
+	Route      string
+	StatusCode int
+	Body       string
+}
+
+func (err *HTTPError) Error() string {
+	return fmt.Sprintf(
+		"remote %s %s failed with status %d: %s",
+		err.Method,
+		err.Route,
+		err.StatusCode,
+		err.Body,
+	)
+}
+
 type EnrollRequest struct {
 	EnrollmentToken    string `json:"enrollmentToken"`
 	Hostname           string `json:"hostname"`
@@ -111,6 +128,13 @@ func (client *Client) Enroll(ctx context.Context, payload EnrollRequest) (Enroll
 	var response EnrollResponse
 	err := client.doJSON(ctx, http.MethodPost, "/api/agent/enroll", payload, &response)
 	return response, err
+}
+
+func (client *Client) CheckAuth(ctx context.Context, agentID string, agentSecret string) error {
+	return client.doJSON(ctx, http.MethodPost, "/api/agent/auth/check", map[string]string{
+		"agentId":     agentID,
+		"agentSecret": agentSecret,
+	}, nil)
 }
 
 func (client *Client) Report(
@@ -225,7 +249,12 @@ func (client *Client) doJSON(
 	}
 
 	if response.StatusCode >= 400 {
-		return fmt.Errorf("remote %s %s failed with status %d: %s", method, route, response.StatusCode, strings.TrimSpace(string(body)))
+		return &HTTPError{
+			Method:     method,
+			Route:      route,
+			StatusCode: response.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+		}
 	}
 
 	if responseBody == nil || len(body) == 0 {

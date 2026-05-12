@@ -21,6 +21,7 @@ if [[ -f "$ENV_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$ENV_FILE"
 fi
+FORCE_REENROLL="false"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -62,6 +63,10 @@ while [[ $# -gt 0 ]]; do
     --auto-update)
       AUTO_UPDATE="$2"
       shift 2
+      ;;
+    --force-reenroll)
+      FORCE_REENROLL="true"
+      shift
       ;;
     --name)
       NAME_OVERRIDE="$2"
@@ -142,15 +147,42 @@ STATE_FILE=$STATE_FILE
 EOF
 
 ENROLL_OUTPUT=""
-if [[ ! -s "$STATE_FILE" ]]; then
+if [[ "$FORCE_REENROLL" == "true" && -s "$STATE_FILE" ]]; then
+  echo "Force re-enroll requested, removing existing agent state."
+  rm -f "$STATE_FILE"
+fi
+
+if [[ -s "$STATE_FILE" ]]; then
+  CHECK_OUTPUT=""
+  set +e
+  CHECK_OUTPUT="$("$INSTALL_DIR/$BIN_NAME" check-auth --config "$ENV_FILE" 2>&1)"
+  CHECK_STATUS=$?
+  set -e
+
+  if [[ "$CHECK_STATUS" -eq 0 ]]; then
+    echo "Existing agent state verified, skipping enroll."
+  elif [[ "$CHECK_STATUS" -eq 10 || "$CHECK_STATUS" -eq 11 ]]; then
+    if [[ -z "$ENROLLMENT_TOKEN" ]]; then
+      echo "Existing agent state is invalid and --enrollment-token was not provided." >&2
+      exit 1
+    fi
+
+    echo "Existing agent state is invalid or rejected by server, re-enrolling."
+    rm -f "$STATE_FILE"
+    ENROLL_OUTPUT="$("$INSTALL_DIR/$BIN_NAME" enroll --config "$ENV_FILE")"
+  else
+    echo "Existing agent state detected, but credential verification failed; keeping existing enrollment." >&2
+    if [[ -n "$CHECK_OUTPUT" ]]; then
+      echo "$CHECK_OUTPUT" >&2
+    fi
+  fi
+else
   if [[ -z "$ENROLLMENT_TOKEN" ]]; then
     echo "Missing --enrollment-token for first enrollment" >&2
     exit 1
   fi
 
   ENROLL_OUTPUT="$("$INSTALL_DIR/$BIN_NAME" enroll --config "$ENV_FILE")"
-else
-  echo "Existing agent state detected, skipping enroll."
 fi
 
 cat > "$ENV_FILE" <<EOF
