@@ -40,6 +40,37 @@ export async function closeTerminalSession(sessionId: string): Promise<void> {
   });
 }
 
+export async function releaseTerminalSession(sessionId: string): Promise<void> {
+  await fetchJson<void>(`/terminals/sessions/${sessionId}/release`, {
+    method: "POST",
+    keepalive: true,
+  });
+}
+
+export function releaseTerminalSessionOnPageLeave(sessionId: string) {
+  const url = `${API_BASE}/terminals/sessions/${sessionId}/release`;
+
+  try {
+    const targetUrl = new URL(url, window.location.href);
+
+    if (
+      targetUrl.origin === window.location.origin &&
+      typeof navigator.sendBeacon === "function" &&
+      navigator.sendBeacon(targetUrl.toString())
+    ) {
+      return;
+    }
+  } catch {
+    // Fall through to the keepalive fetch fallback below.
+  }
+
+  void fetch(url, {
+    method: "POST",
+    credentials: "include",
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
 export function getTerminalStreamUrl(sessionId: string) {
   return `${API_BASE}/terminals/sessions/${sessionId}/stream`;
 }

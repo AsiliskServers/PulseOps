@@ -72,6 +72,10 @@ type TerminalSession = {
 const MAX_HISTORY_CHARS = 120_000;
 const CLOSED_RETENTION_MS = 60_000;
 const IDLE_RETENTION_MS = 15 * 60_000;
+const DETACHED_RETENTION_MS = 45_000;
+const PENDING_AGENT_TIMEOUT_MS = 20_000;
+const STALE_AGENT_TIMEOUT_MS = 15_000;
+const CLEANUP_INTERVAL_MS = 5_000;
 const SHELL_PATH = "/bin/bash";
 const SHELL_WORKDIR = "/root";
 const TERMINAL_MAX_COLS = 360;
@@ -94,6 +98,20 @@ function trimHistory(value: string): string {
 
 export class TerminalBroker {
   private sessions = new Map<string, TerminalSession>();
+  private serverLastSyncAt = new Map<string, number>();
+  private cleanupTimer: ReturnType<typeof setInterval>;
+
+  constructor() {
+    this.cleanupTimer = setInterval(() => {
+      this.cleanup();
+    }, CLEANUP_INTERVAL_MS);
+
+    this.cleanupTimer.unref?.();
+  }
+
+  dispose() {
+    clearInterval(this.cleanupTimer);
+  }
 
   createOrReuse(serverId: string, userId: string) {
     this.cleanup();
@@ -187,11 +205,15 @@ export class TerminalBroker {
   }
 
   syncForAgent(serverId: string, payload: AgentTerminalSyncPayload): { sessions: TerminalAction[] } {
+    this.serverLastSyncAt.set(serverId, Date.now());
     this.cleanup();
+
+    const orphanedSessionIds = new Set<string>();
 
     for (const sessionId of payload.opened ?? []) {
       const session = this.sessions.get(sessionId);
       if (!session || session.serverId !== serverId || session.status === "closed") {
+        orphanedSessionIds.add(sessionId);
         continue;
       }
 
@@ -209,6 +231,7 @@ export class TerminalBroker {
     for (const output of payload.outputs ?? []) {
       const session = this.sessions.get(output.sessionId);
       if (!session || session.serverId !== serverId || session.status === "closed") {
+        orphanedSessionIds.add(output.sessionId);
         continue;
       }
 
@@ -242,7 +265,9 @@ export class TerminalBroker {
       this.markClosed(session, closed.reason ?? null);
     }
 
-    const actions: TerminalAction[] = [];
+    const actions: TerminalAction[] = [...orphanedSessionIds].map((sessionId) =>
+      this.buildCloseAction(sessionId)
+    );
 
     for (const session of this.sessions.values()) {
       if (session.serverId !== serverId || session.status === "closed") {
@@ -320,12 +345,54 @@ export class TerminalBroker {
     session.updatedAt = Date.now();
   }
 
-  private cleanup() {
-    const now = Date.now();
+  private buildCloseAction(sessionId: string): TerminalAction {
+    return {
+      sessionId,
+      open: false,
+      close: true,
+      input: "",
+      resize: null,
+      shell: SHELL_PATH,
+      cwd: SHELL_WORKDIR,
+    };
+  }
+
+  private cleanup(now = Date.now()) {
+    const activeServerIds = new Set<string>();
 
     for (const [sessionId, session] of this.sessions) {
       if (session.status === "closed" && now - session.updatedAt > CLOSED_RETENTION_MS) {
         this.sessions.delete(sessionId);
+        continue;
+      }
+
+      activeServerIds.add(session.serverId);
+
+      const lastAgentSyncAt = this.serverLastSyncAt.get(session.serverId) ?? 0;
+      const agentIsStale =
+        lastAgentSyncAt > 0 && now - lastAgentSyncAt > STALE_AGENT_TIMEOUT_MS;
+
+      if (
+        session.status === "pending" &&
+        now - session.createdAt > PENDING_AGENT_TIMEOUT_MS &&
+        (lastAgentSyncAt === 0 || now - lastAgentSyncAt > PENDING_AGENT_TIMEOUT_MS)
+      ) {
+        this.markClosed(session, "L'agent ne repond plus.");
+        continue;
+      }
+
+      if (session.status === "connected" && agentIsStale) {
+        this.markClosed(session, "Connexion agent perdue.");
+        continue;
+      }
+
+      if (session.listeners.size === 0 && now - session.updatedAt > DETACHED_RETENTION_MS) {
+        if (session.status === "pending" || session.closeRequested || agentIsStale) {
+          this.markClosed(session, session.closeReason ?? "Session fermee apres fermeture de la page.");
+          continue;
+        }
+
+        this.requestClose(session, "Session fermee apres fermeture de la page.");
         continue;
       }
 
@@ -336,6 +403,12 @@ export class TerminalBroker {
         }
 
         this.requestClose(session, "Session expiree.");
+      }
+    }
+
+    for (const [serverId, lastSyncAt] of this.serverLastSyncAt) {
+      if (!activeServerIds.has(serverId) && now - lastSyncAt > IDLE_RETENTION_MS) {
+        this.serverLastSyncAt.delete(serverId);
       }
     }
   }

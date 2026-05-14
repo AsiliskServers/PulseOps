@@ -20,6 +20,10 @@ export async function buildApp(env: ServerEnv) {
   });
   const terminalBroker = new TerminalBroker();
 
+  app.addHook("onClose", async () => {
+    terminalBroker.dispose();
+  });
+
   await app.register(cors, {
     origin: env.webOrigin,
     credentials: true,

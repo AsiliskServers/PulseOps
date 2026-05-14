@@ -187,4 +187,23 @@ export async function registerTerminalRoutes(
       return reply.status(statusCode).send({ message });
     }
   });
+
+  app.post("/sessions/:id/release", async (request, reply) => {
+    const user = await requireSessionUser(request, reply);
+
+    if (!user) {
+      return;
+    }
+
+    const sessionId = String((request.params as { id: string }).id);
+
+    try {
+      broker.closeForUser(sessionId, user.id);
+      return reply.status(204).send();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to release terminal session";
+      const statusCode = message === "Terminal session not found" ? 404 : 400;
+      return reply.status(statusCode).send({ message });
+    }
+  });
 }

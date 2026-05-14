@@ -6,6 +6,8 @@ import {
   closeTerminalSession,
   getTerminalStreamUrl,
   openTerminalSession,
+  releaseTerminalSession,
+  releaseTerminalSessionOnPageLeave,
   resizeTerminalSession,
   sendTerminalInput,
   type TerminalSessionResponse,
@@ -20,6 +22,7 @@ type Props = {
 
 const TERMINAL_MAX_COLS = 360;
 const TERMINAL_MAX_ROWS = 120;
+const TERMINAL_AUTO_CLOSE_MS = 6_000;
 
 type TerminalEvent =
   | {
@@ -77,6 +80,14 @@ function getStatusTone(status: TerminalSessionStatus | "connecting" | "error") {
 }
 
 function resolveTerminalErrorMessage(message: string) {
+  if (message.includes("Terminal session not found")) {
+    return "La session terminal n'existe plus. Cette fenetre va se fermer automatiquement.";
+  }
+
+  if (message.includes("Terminal session is closed")) {
+    return "La session terminal est deja fermee. Cette fenetre va se fermer automatiquement.";
+  }
+
   if (message.includes("/api/terminals/sessions") && message.includes("not found")) {
     return "Le terminal agent n'est pas encore deploye sur cette instance. Mets a jour le serveur principal puis les agents.";
   }
@@ -86,6 +97,10 @@ function resolveTerminalErrorMessage(message: string) {
   }
 
   return message;
+}
+
+function shouldAutoCloseTerminal(message: string) {
+  return message.includes("Terminal session not found") || message.includes("Terminal session is closed");
 }
 
 function clampTerminalSize(input: { cols: number; rows: number }) {
@@ -125,6 +140,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
   const streamRef = useRef<EventSource | null>(null);
   const flushTimerRef = useRef<number | null>(null);
   const resizeTimerRef = useRef<number | null>(null);
+  const autoCloseTimerRef = useRef<number | null>(null);
   const sendingInputRef = useRef(false);
   const lastSentSizeRef = useRef<string | null>(null);
   const inputBufferRef = useRef("");
@@ -132,6 +148,35 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
   const closingRef = useRef(false);
   const [status, setStatus] = useState<TerminalSessionStatus | "connecting" | "error">("connecting");
   const [error, setError] = useState<string | null>(null);
+
+  const clearAutoCloseTimer = () => {
+    if (autoCloseTimerRef.current !== null) {
+      window.clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  };
+
+  const dismissTerminal = (releaseMode: "close" | "release" = "close") => {
+    if (closingRef.current) {
+      return;
+    }
+
+    closingRef.current = true;
+    clearAutoCloseTimer();
+    streamRef.current?.close();
+    streamRef.current = null;
+
+    const sessionId = sessionRef.current?.sessionId;
+    if (sessionId) {
+      if (releaseMode === "release") {
+        void releaseTerminalSession(sessionId).catch(() => undefined);
+      } else {
+        void closeTerminalSession(sessionId).catch(() => undefined);
+      }
+    }
+
+    onClose();
+  };
 
   useEffect(() => {
     const terminal = new Terminal({
@@ -189,6 +234,9 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       void resizeTerminalSession(sessionId, size).catch((cause) => {
         const message = cause instanceof Error ? cause.message : "Impossible de redimensionner le terminal";
         setError(resolveTerminalErrorMessage(message));
+        if (shouldAutoCloseTerminal(message)) {
+          dismissTerminal();
+        }
       });
     };
 
@@ -223,6 +271,9 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : "Impossible d'envoyer la commande";
         setError(resolveTerminalErrorMessage(message));
+        if (shouldAutoCloseTerminal(message)) {
+          dismissTerminal();
+        }
       } finally {
         sendingInputRef.current = false;
         if (inputBufferRef.current.length > 0) {
@@ -273,6 +324,23 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
     viewport?.addEventListener("resize", handleViewportResize);
     window.addEventListener("resize", handleViewportResize);
 
+    const scheduleAutoClose = (terminalMessage?: string) => {
+      if (destroyedRef.current || closingRef.current || autoCloseTimerRef.current !== null) {
+        return;
+      }
+
+      if (terminalMessage) {
+        terminal.writeln("");
+        terminal.writeln(`[PulseOps] ${terminalMessage}`);
+      }
+      terminal.writeln("[PulseOps] Fermeture automatique de cette fenetre dans quelques secondes.");
+
+      autoCloseTimerRef.current = window.setTimeout(() => {
+        autoCloseTimerRef.current = null;
+        dismissTerminal();
+      }, TERMINAL_AUTO_CLOSE_MS);
+    };
+
     const bindStream = (session: TerminalSessionResponse) => {
       const stream = new EventSource(getTerminalStreamUrl(session.sessionId));
       streamRef.current = stream;
@@ -321,10 +389,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
         >;
 
         setStatus("closed");
-        if (payload.reason) {
-          terminal.writeln("");
-          terminal.writeln(`[PulseOps] ${payload.reason}`);
-        }
+        scheduleAutoClose(payload.reason ?? undefined);
       });
 
       stream.onerror = () => {
@@ -332,8 +397,14 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
           return;
         }
 
+        stream.close();
+        if (streamRef.current === stream) {
+          streamRef.current = null;
+        }
+
         setStatus("error");
-        setError("Le flux terminal a ete interrompu.");
+        setError("Le flux terminal a ete interrompu. Cette fenetre va se fermer automatiquement.");
+        scheduleAutoClose("Le flux terminal a ete interrompu.");
       };
     };
 
@@ -368,8 +439,21 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       }
     })();
 
+    const handlePageLeave = () => {
+      const sessionId = sessionRef.current?.sessionId;
+      if (!sessionId) {
+        return;
+      }
+
+      releaseTerminalSessionOnPageLeave(sessionId);
+    };
+
+    window.addEventListener("pagehide", handlePageLeave);
+    window.addEventListener("beforeunload", handlePageLeave);
+
     return () => {
       destroyedRef.current = true;
+      clearAutoCloseTimer();
 
       if (flushTimerRef.current !== null) {
         window.clearTimeout(flushTimerRef.current);
@@ -382,7 +466,10 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
       resizeObserver.disconnect();
       viewport?.removeEventListener("resize", handleViewportResize);
       window.removeEventListener("resize", handleViewportResize);
+      window.removeEventListener("pagehide", handlePageLeave);
+      window.removeEventListener("beforeunload", handlePageLeave);
       streamRef.current?.close();
+      streamRef.current = null;
       terminal.dispose();
 
       const sessionId = sessionRef.current?.sessionId;
@@ -429,6 +516,9 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
             const message =
               cause instanceof Error ? cause.message : "Impossible de coller dans le terminal";
             setError(resolveTerminalErrorMessage(message));
+            if (shouldAutoCloseTerminal(message)) {
+              dismissTerminal();
+            }
           });
         }, 4);
       }
@@ -441,15 +531,7 @@ export function AgentTerminal({ serverId, serverName, onClose }: Props) {
   }
 
   async function handleClose() {
-    closingRef.current = true;
-    streamRef.current?.close();
-
-    const sessionId = sessionRef.current?.sessionId;
-    if (sessionId) {
-      await closeTerminalSession(sessionId).catch(() => undefined);
-    }
-
-    onClose();
+    dismissTerminal();
   }
 
   return (
