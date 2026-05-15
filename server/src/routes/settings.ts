@@ -3,12 +3,29 @@ import type { ServerEnv } from "../lib/env.js";
 import { requireSessionUser } from "../lib/session.js";
 import { getEnrollmentToken, rotateEnrollmentToken } from "../services/settings.js";
 
+function shellQuote(value: string) {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
 function buildInstallCommand(publicUrl: string, token: string) {
-  return `curl -fsSL ${publicUrl}/install-agent.sh | bash -s -- --server-url ${publicUrl} --enrollment-token ${token} --environment production`;
+  return [
+    `curl -fsSL ${shellQuote(`${publicUrl}/install-agent.sh`)}`,
+    "| bash -s --",
+    `--server-url ${shellQuote(publicUrl)}`,
+    `--enrollment-token ${shellQuote(token)}`,
+    "--environment production",
+  ].join(" ");
 }
 
 function buildRestrictedInstallCommand(publicUrl: string, token: string) {
-  return `curl -fsSL ${publicUrl}/install-agent.sh | bash -s -- --server-url ${publicUrl} --enrollment-token ${token} --environment production --agent-profile appliance`;
+  return [
+    `curl -fsSL ${shellQuote(`${publicUrl}/install-agent.sh`)}`,
+    "| bash -s --",
+    `--server-url ${shellQuote(publicUrl)}`,
+    `--enrollment-token ${shellQuote(token)}`,
+    "--environment production",
+    "--agent-profile appliance",
+  ].join(" ");
 }
 
 function buildEnrollmentResponse(env: ServerEnv, token: string) {

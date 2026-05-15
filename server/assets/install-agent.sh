@@ -18,8 +18,40 @@ STATE_FILE="$INSTALL_DIR/state.json"
 ENV_FILE="$INSTALL_DIR/pulseops-agent.env"
 
 if [[ -f "$ENV_FILE" ]]; then
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
+  while IFS='=' read -r key value; do
+    case "$key" in
+      SERVER_URL)
+        SERVER_URL="$value"
+        ;;
+      ENROLLMENT_TOKEN)
+        ENROLLMENT_TOKEN="$value"
+        ;;
+      ENVIRONMENT)
+        ENVIRONMENT="$value"
+        ;;
+      ALLOW_UPGRADE)
+        ALLOW_UPGRADE="$value"
+        ;;
+      SHELL_ACCESS_ENABLED)
+        SHELL_ACCESS_ENABLED="$value"
+        ;;
+      AUTO_UPDATE)
+        AUTO_UPDATE="$value"
+        ;;
+      NAME_OVERRIDE)
+        NAME_OVERRIDE="$value"
+        ;;
+      REPORT_INTERVAL_SECONDS)
+        REPORT_INTERVAL="$value"
+        ;;
+      JOB_POLL_INTERVAL_SECONDS)
+        POLL_INTERVAL="$value"
+        ;;
+      AUTO_UPDATE_INTERVAL_SECONDS)
+        AUTO_UPDATE_INTERVAL="$value"
+        ;;
+    esac
+  done < "$ENV_FILE"
 fi
 FORCE_REENROLL="false"
 
@@ -106,6 +138,63 @@ if ! grep -qE '^13(\.|$)' /etc/debian_version; then
   exit 1
 fi
 
+validate_bool() {
+  local name="$1"
+  local value="$2"
+
+  case "$value" in
+    true|false)
+      ;;
+    *)
+      echo "$name must be true or false." >&2
+      exit 1
+      ;;
+  esac
+}
+
+validate_interval() {
+  local name="$1"
+  local value="$2"
+  local min="$3"
+  local max="$4"
+
+  if [[ ! "$value" =~ ^[0-9]+$ ]] || (( value < min || value > max )); then
+    echo "$name must be an integer between $min and $max." >&2
+    exit 1
+  fi
+}
+
+if [[ ! "$SERVER_URL" =~ ^https?://[^[:space:]]+$ ]]; then
+  echo "SERVER_URL must be an HTTP(S) URL without whitespace." >&2
+  exit 1
+fi
+
+case "$ENVIRONMENT" in
+  production|staging|internal|other)
+    ;;
+  *)
+    echo "ENVIRONMENT must be production, staging, internal, or other." >&2
+    exit 1
+    ;;
+esac
+
+validate_bool "ALLOW_UPGRADE" "$ALLOW_UPGRADE"
+validate_bool "SHELL_ACCESS_ENABLED" "$SHELL_ACCESS_ENABLED"
+validate_bool "AUTO_UPDATE" "$AUTO_UPDATE"
+validate_interval "REPORT_INTERVAL_SECONDS" "$REPORT_INTERVAL" 30 86400
+validate_interval "JOB_POLL_INTERVAL_SECONDS" "$POLL_INTERVAL" 2 3600
+validate_interval "AUTO_UPDATE_INTERVAL_SECONDS" "$AUTO_UPDATE_INTERVAL" 60 86400
+
+if [[ -n "$ENROLLMENT_TOKEN" && "$ENROLLMENT_TOKEN" =~ [[:space:]] ]]; then
+  echo "ENROLLMENT_TOKEN must not contain whitespace." >&2
+  exit 1
+fi
+
+if (( ${#NAME_OVERRIDE} > 120 )) || [[ "$NAME_OVERRIDE" == *$'\n'* || "$NAME_OVERRIDE" == *$'\r'* ]]; then
+  echo "NAME_OVERRIDE must be 120 characters or fewer and stay on one line." >&2
+  exit 1
+fi
+
 ARCH="$(dpkg --print-architecture)"
 
 case "$ARCH" in
@@ -121,14 +210,41 @@ case "$ARCH" in
     ;;
 esac
 
+umask 077
 mkdir -p "$INSTALL_DIR"
+chmod 700 "$INSTALL_DIR"
 
 if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files | grep -q "^${SERVICE_NAME}$"; then
   systemctl stop "$SERVICE_NAME" || true
 fi
 
 TMP_BIN="$INSTALL_DIR/$BIN_NAME.new"
+TMP_MANIFEST="$INSTALL_DIR/latest.json.new"
+curl -fsSL "$SERVER_URL/downloads/latest.json" -o "$TMP_MANIFEST"
+EXPECTED_SHA256="$(
+  awk -v name="$ASSET_NAME" '
+    in_checksums && /^[[:space:]]*}/ {
+      exit
+    }
+    in_checksums && index($0, "\"" name "\"") {
+      split($0, parts, ":")
+      value = parts[2]
+      gsub(/[",[:space:]]/, "", value)
+      print value
+      exit
+    }
+    /"checksums"[[:space:]]*:/ {
+      in_checksums = 1
+    }
+  ' "$TMP_MANIFEST"
+)"
+rm -f "$TMP_MANIFEST"
+if [[ ! "$EXPECTED_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+  echo "Missing or invalid checksum for $ASSET_NAME in latest.json" >&2
+  exit 1
+fi
 curl -fsSL "$SERVER_URL/downloads/$ASSET_NAME" -o "$TMP_BIN"
+printf '%s  %s\n' "$EXPECTED_SHA256" "$TMP_BIN" | sha256sum -c -
 chmod +x "$TMP_BIN"
 mv "$TMP_BIN" "$INSTALL_DIR/$BIN_NAME"
 
@@ -145,6 +261,7 @@ JOB_POLL_INTERVAL_SECONDS=$POLL_INTERVAL
 AUTO_UPDATE_INTERVAL_SECONDS=$AUTO_UPDATE_INTERVAL
 STATE_FILE=$STATE_FILE
 EOF
+chmod 600 "$ENV_FILE"
 
 ENROLL_OUTPUT=""
 should_reenroll_from_check_failure() {
@@ -213,6 +330,7 @@ JOB_POLL_INTERVAL_SECONDS=$POLL_INTERVAL
 AUTO_UPDATE_INTERVAL_SECONDS=$AUTO_UPDATE_INTERVAL
 STATE_FILE=$STATE_FILE
 EOF
+chmod 600 "$ENV_FILE"
 
 cat > /etc/systemd/system/pulseops-agent.service <<EOF
 [Unit]

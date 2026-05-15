@@ -6,6 +6,7 @@ import { TerminalBroker, type TerminalEvent } from "../services/terminal-broker.
 
 const TERMINAL_MAX_COLS = 360;
 const TERMINAL_MAX_ROWS = 120;
+const TERMINAL_MAX_INPUT_CHARS = 16_384;
 
 function writeSseEvent(event: TerminalEvent) {
   return `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
@@ -127,6 +128,10 @@ export async function registerTerminalRoutes(
 
       if (typeof rawData !== "string" || rawData.length === 0) {
         return reply.status(400).send({ message: "data is required" });
+      }
+
+      if (rawData.length > TERMINAL_MAX_INPUT_CHARS) {
+        return reply.status(413).send({ message: "terminal input is too large" });
       }
 
       const data = rawData;

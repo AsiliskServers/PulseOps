@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import type { ServerEnv } from "../lib/env.js";
@@ -21,6 +22,8 @@ type AuthenticatedAgentServer = {
 };
 
 const AGENT_AUTH_CACHE_TTL_MS = 15_000;
+const MAX_AGENT_TEXT_CHARS = 64_000;
+const MAX_TERMINAL_SYNC_ITEMS = 64;
 const agentAuthCache = new Map<
   string,
   {
@@ -28,6 +31,26 @@ const agentAuthCache = new Map<
     server: AuthenticatedAgentServer;
   }
 >();
+
+function hashAuthCacheKey(agentId: string, agentSecret: string) {
+  return crypto
+    .createHash("sha256")
+    .update(agentId)
+    .update("\0")
+    .update(agentSecret)
+    .digest("base64url");
+}
+
+function constantTimeEqual(left: string, right: string) {
+  const leftDigest = crypto.createHash("sha256").update(left).digest();
+  const rightDigest = crypto.createHash("sha256").update(right).digest();
+
+  return left.length === right.length && crypto.timingSafeEqual(leftDigest, rightDigest);
+}
+
+function clampText(value: string, maxLength = MAX_AGENT_TEXT_CHARS) {
+  return value.length > maxLength ? value.slice(value.length - maxLength) : value;
+}
 
 function normalizeDate(value: string | undefined): Date | null {
   if (!value) {
@@ -50,7 +73,7 @@ async function authenticateAgent(
   const agentId = readRequiredString(body, "agentId", "agentId");
   const agentSecret = readRequiredString(body, "agentSecret", "agentSecret");
   const useCache = options.useCache ?? true;
-  const cacheKey = `${agentId}:${agentSecret}`;
+  const cacheKey = hashAuthCacheKey(agentId, agentSecret);
   const cached = agentAuthCache.get(cacheKey);
 
   if (useCache && cached && cached.expiresAt > Date.now() && cached.server.isActive) {
@@ -83,9 +106,14 @@ async function authenticateAgent(
     throw new Error("Invalid agent credentials");
   }
 
-  const expectedSecret = decryptSecret(server.agentSecretEncrypted, env.encryptionKey);
+  let expectedSecret = "";
+  try {
+    expectedSecret = decryptSecret(server.agentSecretEncrypted, env.encryptionKey);
+  } catch {
+    throw new Error("Invalid agent credentials");
+  }
 
-  if (expectedSecret !== agentSecret) {
+  if (!constantTimeEqual(expectedSecret, agentSecret)) {
     throw new Error("Invalid agent credentials");
   }
 
@@ -207,7 +235,8 @@ export async function registerAgentRoutes(
       const upgradableCount = Number(body.upgradableCount ?? 0);
       const securityCount = Number(body.securityCount ?? 0);
       const rebootRequired = Boolean(body.rebootRequired);
-      const outputPreview = typeof body.outputPreview === "string" ? body.outputPreview : "";
+      const outputPreview =
+        typeof body.outputPreview === "string" ? clampText(body.outputPreview) : "";
 
       if (
         Number.isNaN(upgradableCount) ||
@@ -247,7 +276,7 @@ export async function registerAgentRoutes(
             rebootRequired,
             lastCheckAt: checkedAt,
             outputPreview,
-            rawSummaryJson: JSON.stringify(body),
+            rawSummaryJson: clampText(JSON.stringify(body)),
           },
         }),
       ]);
@@ -350,8 +379,10 @@ export async function registerAgentRoutes(
         status === "running"
           ? null
           : normalizeDate(readOptionalString(body, "finishedAt")) ?? new Date();
-      const outputPreview = readOptionalString(body, "outputPreview") ?? null;
-      const errorMessage = readOptionalString(body, "errorMessage") ?? null;
+      const outputPreviewRaw = readOptionalString(body, "outputPreview");
+      const errorMessageRaw = readOptionalString(body, "errorMessage");
+      const outputPreview = outputPreviewRaw ? clampText(outputPreviewRaw) : null;
+      const errorMessage = errorMessageRaw ? clampText(errorMessageRaw) : null;
 
       await prisma.job.update({
         where: {
@@ -380,11 +411,13 @@ export async function registerAgentRoutes(
 
       const opened =
         Array.isArray(body.opened)
-          ? body.opened.filter((value): value is string => typeof value === "string")
+          ? body.opened
+              .filter((value): value is string => typeof value === "string")
+              .slice(0, MAX_TERMINAL_SYNC_ITEMS)
           : [];
 
       const outputs = Array.isArray(body.outputs)
-        ? body.outputs.flatMap((value) => {
+        ? body.outputs.slice(0, MAX_TERMINAL_SYNC_ITEMS).flatMap((value) => {
             if (!isRecord(value) || typeof value.sessionId !== "string" || typeof value.data !== "string") {
               return [];
             }
@@ -392,14 +425,14 @@ export async function registerAgentRoutes(
             return [
               {
                 sessionId: value.sessionId,
-                data: value.data,
+                data: clampText(value.data),
               },
             ];
           })
         : [];
 
       const closed = Array.isArray(body.closed)
-        ? body.closed.flatMap((value) => {
+        ? body.closed.slice(0, MAX_TERMINAL_SYNC_ITEMS).flatMap((value) => {
             if (!isRecord(value) || typeof value.sessionId !== "string") {
               return [];
             }
@@ -407,7 +440,7 @@ export async function registerAgentRoutes(
             return [
               {
                 sessionId: value.sessionId,
-                reason: typeof value.reason === "string" ? value.reason : null,
+                reason: typeof value.reason === "string" ? clampText(value.reason, 1000) : null,
               },
             ];
           })

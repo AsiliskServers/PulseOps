@@ -5,6 +5,7 @@ import { agentDistDir } from "../lib/paths.js";
 type AgentReleaseManifest = {
   version: string;
   assets: Record<string, string>;
+  checksums: Record<string, string>;
 };
 
 let cachedManifest: AgentReleaseManifest | null = null;
@@ -38,7 +39,13 @@ async function getLatestAgentReleaseManifest(): Promise<AgentReleaseManifest | n
     const content = await readFile(manifestPath, "utf8");
     const parsed = JSON.parse(content) as Partial<AgentReleaseManifest>;
 
-    if (!parsed.version || !parsed.assets || typeof parsed.assets !== "object") {
+    if (
+      !parsed.version ||
+      !parsed.assets ||
+      typeof parsed.assets !== "object" ||
+      !parsed.checksums ||
+      typeof parsed.checksums !== "object"
+    ) {
       cachedManifest = null;
       cachedMtimeMs = fileStat.mtimeMs;
       return null;
@@ -47,6 +54,7 @@ async function getLatestAgentReleaseManifest(): Promise<AgentReleaseManifest | n
     cachedManifest = {
       version: parsed.version,
       assets: parsed.assets as Record<string, string>,
+      checksums: parsed.checksums as Record<string, string>,
     };
     cachedMtimeMs = fileStat.mtimeMs;
 

@@ -2,6 +2,7 @@ export type EnvironmentValue = "production" | "staging" | "internal" | "other";
 export type JobType = "refresh" | "upgrade" | "agent_update";
 
 const ENVIRONMENTS = new Set<EnvironmentValue>(["production", "staging", "internal", "other"]);
+const DEFAULT_MAX_STRING_LENGTH = 10_000;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -10,7 +11,8 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 export function readRequiredString(
   input: Record<string, unknown>,
   key: string,
-  label: string
+  label: string,
+  options: { maxLength?: number } = {}
 ): string {
   const value = input[key];
 
@@ -18,10 +20,25 @@ export function readRequiredString(
     throw new Error(`${label} is required`);
   }
 
-  return value.trim();
+  const trimmed = value.trim();
+  const maxLength = options.maxLength ?? DEFAULT_MAX_STRING_LENGTH;
+
+  if (trimmed.length === 0) {
+    throw new Error(`${label} is required`);
+  }
+
+  if (trimmed.length > maxLength) {
+    throw new Error(`${label} must be ${maxLength} characters or less`);
+  }
+
+  return trimmed;
 }
 
-export function readOptionalString(input: Record<string, unknown>, key: string): string | undefined {
+export function readOptionalString(
+  input: Record<string, unknown>,
+  key: string,
+  options: { maxLength?: number } = {}
+): string | undefined {
   const value = input[key];
 
   if (typeof value !== "string") {
@@ -29,6 +46,12 @@ export function readOptionalString(input: Record<string, unknown>, key: string):
   }
 
   const trimmed = value.trim();
+  const maxLength = options.maxLength ?? DEFAULT_MAX_STRING_LENGTH;
+
+  if (trimmed.length > maxLength) {
+    throw new Error(`${key} must be ${maxLength} characters or less`);
+  }
+
   return trimmed.length > 0 ? trimmed : undefined;
 }
 

@@ -5,6 +5,12 @@ import type { ServerEnv } from "../lib/env.js";
 import { agentDistDir } from "../lib/paths.js";
 import { buildInstallScript } from "../services/install-script.js";
 
+const DOWNLOADABLE_AGENT_FILES = new Set([
+  "latest.json",
+  "pulseops-agent-linux-amd64",
+  "pulseops-agent-linux-arm64",
+]);
+
 export async function registerPublicRoutes(
   app: FastifyInstance,
   env: ServerEnv
@@ -19,8 +25,19 @@ export async function registerPublicRoutes(
   });
 
   app.get("/downloads/:name", async (request, reply) => {
-    const name = path.basename(String((request.params as { name: string }).name));
-    const filePath = path.join(agentDistDir, name);
+    const rawName = String((request.params as { name: string }).name);
+    const name = path.basename(rawName);
+
+    if (name !== rawName || !DOWNLOADABLE_AGENT_FILES.has(name)) {
+      return reply.status(404).send({ message: "Agent binary not found" });
+    }
+
+    const distDir = path.resolve(agentDistDir);
+    const filePath = path.resolve(distDir, name);
+
+    if (!filePath.startsWith(`${distDir}${path.sep}`)) {
+      return reply.status(404).send({ message: "Agent binary not found" });
+    }
 
     try {
       await access(filePath);

@@ -22,28 +22,43 @@ import {
 } from "../services/serializers.js";
 import { getLatestAgentVersion } from "../services/agent-release.js";
 
+const MAX_CATEGORY_IDS = 100;
+const MAX_BATCH_SERVER_IDS = 100;
+
+function normalizeCategoryIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const categoryIds = Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0)
+    )
+  );
+
+  if (categoryIds.length > MAX_CATEGORY_IDS) {
+    throw new Error(`categoryIds must contain ${MAX_CATEGORY_IDS} categories or fewer`);
+  }
+
+  return categoryIds;
+}
+
 function parseCreatePayload(body: unknown) {
   if (!isRecord(body)) {
     throw new Error("Invalid request body");
   }
 
-  const categoryIds = Array.isArray(body.categoryIds)
-    ? Array.from(
-        new Set(
-          body.categoryIds
-            .filter((value): value is string => typeof value === "string")
-            .map((value) => value.trim())
-            .filter((value) => value.length > 0)
-        )
-      )
-    : [];
+  const categoryIds = normalizeCategoryIds(body.categoryIds);
 
   return {
-    name: readRequiredString(body, "name", "name"),
+    name: readRequiredString(body, "name", "name", { maxLength: 120 }),
     environment: validateEnvironment(readRequiredString(body, "environment", "environment")),
-    notes: readOptionalString(body, "notes"),
+    notes: readOptionalString(body, "notes", { maxLength: 5000 }),
     isActive: readOptionalBoolean(body, "isActive") ?? true,
-    sshHost: readOptionalString(body, "sshHost"),
+    sshHost: readOptionalString(body, "sshHost", { maxLength: 255 }),
     sshPort: readOptionalInteger(body, "sshPort", { min: 1, max: 65535 }) ?? 22,
     categoryIds,
   };
@@ -103,14 +118,7 @@ function parseUpdatePayload(body: unknown) {
 
   const environment = readOptionalString(body, "environment");
   const categoryIds = Array.isArray(body.categoryIds)
-    ? Array.from(
-        new Set(
-          body.categoryIds
-            .filter((value): value is string => typeof value === "string")
-            .map((value) => value.trim())
-            .filter((value) => value.length > 0)
-        )
-      )
+    ? normalizeCategoryIds(body.categoryIds)
     : body.categoryIds === undefined
       ? undefined
       : null;
@@ -120,13 +128,17 @@ function parseUpdatePayload(body: unknown) {
   }
 
   return {
-    name: readOptionalString(body, "name"),
+    name: readOptionalString(body, "name", { maxLength: 120 }),
     environment: environment ? validateEnvironment(environment) : undefined,
     notes:
-      typeof body.notes === "string" ? body.notes.trim() || null : undefined,
+      typeof body.notes === "string"
+        ? readOptionalString(body, "notes", { maxLength: 5000 }) ?? null
+        : undefined,
     isActive: readOptionalBoolean(body, "isActive"),
     sshHost:
-      typeof body.sshHost === "string" ? body.sshHost.trim() || null : undefined,
+      typeof body.sshHost === "string"
+        ? readOptionalString(body, "sshHost", { maxLength: 255 }) ?? null
+        : undefined,
     sshPort: readOptionalInteger(body, "sshPort", { min: 1, max: 65535 }),
     categoryIds,
   };
@@ -153,6 +165,10 @@ function parseBatchJobPayload(body: unknown) {
 
   if (serverIds.length === 0) {
     throw new Error("serverIds must contain at least one server id");
+  }
+
+  if (serverIds.length > MAX_BATCH_SERVER_IDS) {
+    throw new Error(`serverIds must contain ${MAX_BATCH_SERVER_IDS} servers or fewer`);
   }
 
   return {

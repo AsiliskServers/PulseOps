@@ -13,6 +13,8 @@ import (
 	"github.com/AsiliskServers/PulseOps/agent/internal/platform"
 )
 
+const maxResponseBodyBytes = 1 * 1024 * 1024
+
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
@@ -243,9 +245,12 @@ func (client *Client) doJSON(
 	}
 	defer response.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBodyBytes+1))
 	if err != nil {
 		return err
+	}
+	if len(body) > maxResponseBodyBytes {
+		return fmt.Errorf("remote response body exceeds %d bytes", maxResponseBodyBytes)
 	}
 
 	if response.StatusCode >= 400 {

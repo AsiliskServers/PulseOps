@@ -15,6 +15,14 @@ export async function ensureBootstrapAdmin(env: ServerEnv): Promise<void> {
     );
   }
 
+  if (env.adminPassword.length < 12) {
+    throw new Error("ADMIN_PASSWORD must contain at least 12 characters");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.adminEmail)) {
+    throw new Error("ADMIN_EMAIL must be a valid email address");
+  }
+
   await prisma.user.create({
     data: {
       email: env.adminEmail.trim().toLowerCase(),

@@ -49,7 +49,9 @@ export async function registerCategoryRoutes(app: FastifyInstance): Promise<void
         return reply.status(400).send({ message: "Invalid request body" });
       }
 
-      const name = normalizeCategoryName(readRequiredString(request.body, "name", "name"));
+      const name = normalizeCategoryName(
+        readRequiredString(request.body, "name", "name", { maxLength: 80 })
+      );
       if (name.length === 0) {
         return reply.status(400).send({ message: "name is required" });
       }

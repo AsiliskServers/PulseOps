@@ -2,6 +2,8 @@ package update
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,9 +17,17 @@ import (
 )
 
 type Manifest struct {
-	Version string            `json:"version"`
-	Assets  map[string]string `json:"assets"`
+	Version   string            `json:"version"`
+	Assets    map[string]string `json:"assets"`
+	Checksums map[string]string `json:"checksums"`
 }
+
+type asset struct {
+	name     string
+	checksum string
+}
+
+const maxAgentBinaryBytes = 100 * 1024 * 1024
 
 func CheckAndApply(ctx context.Context, serverURL string, currentVersion string) (bool, string, error) {
 	manifest, err := fetchManifest(ctx, strings.TrimRight(serverURL, "/")+"/downloads/latest.json")
@@ -29,7 +39,7 @@ func CheckAndApply(ctx context.Context, serverURL string, currentVersion string)
 		return false, manifest.Version, nil
 	}
 
-	assetName, err := resolveAssetName(manifest)
+	asset, err := resolveAsset(manifest)
 	if err != nil {
 		return false, manifest.Version, err
 	}
@@ -39,7 +49,7 @@ func CheckAndApply(ctx context.Context, serverURL string, currentVersion string)
 		return false, manifest.Version, err
 	}
 
-	if err := downloadReplacement(ctx, strings.TrimRight(serverURL, "/")+"/downloads/"+assetName, executablePath); err != nil {
+	if err := downloadReplacement(ctx, strings.TrimRight(serverURL, "/")+"/downloads/"+asset.name, executablePath, asset.checksum); err != nil {
 		return false, manifest.Version, err
 	}
 
@@ -80,16 +90,33 @@ func fetchManifest(ctx context.Context, url string) (Manifest, error) {
 	return manifest, nil
 }
 
-func resolveAssetName(manifest Manifest) (string, error) {
+func resolveAsset(manifest Manifest) (asset, error) {
 	key := runtime.GOOS + "-" + runtime.GOARCH
 	assetName := manifest.Assets[key]
 	if assetName == "" {
-		return "", fmt.Errorf("no update asset available for %s", key)
+		return asset{}, fmt.Errorf("no update asset available for %s", key)
 	}
-	return assetName, nil
+
+	if strings.ContainsAny(assetName, `/\`) || filepath.Base(assetName) != assetName {
+		return asset{}, fmt.Errorf("invalid update asset name %q", assetName)
+	}
+
+	checksum := manifest.Checksums[assetName]
+	if checksum == "" {
+		return asset{}, fmt.Errorf("missing checksum for update asset %q", assetName)
+	}
+
+	if _, err := hex.DecodeString(checksum); err != nil {
+		return asset{}, fmt.Errorf("invalid checksum for update asset %q", assetName)
+	}
+
+	return asset{
+		name:     assetName,
+		checksum: strings.ToLower(checksum),
+	}, nil
 }
 
-func downloadReplacement(ctx context.Context, url string, executablePath string) error {
+func downloadReplacement(ctx context.Context, url string, executablePath string, expectedChecksum string) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -119,8 +146,20 @@ func downloadReplacement(ctx context.Context, url string, executablePath string)
 		_ = os.Remove(tempPath)
 	}()
 
-	if _, err := io.Copy(tempFile, response.Body); err != nil {
+	hasher := sha256.New()
+	reader := io.LimitReader(response.Body, maxAgentBinaryBytes+1)
+	written, err := io.Copy(io.MultiWriter(tempFile, hasher), reader)
+	if err != nil {
 		return err
+	}
+
+	if written > maxAgentBinaryBytes {
+		return fmt.Errorf("binary download exceeds %d bytes", maxAgentBinaryBytes)
+	}
+
+	actualChecksum := hex.EncodeToString(hasher.Sum(nil))
+	if actualChecksum != expectedChecksum {
+		return fmt.Errorf("binary checksum mismatch: expected %s, got %s", expectedChecksum, actualChecksum)
 	}
 
 	if err := tempFile.Chmod(0o755); err != nil {

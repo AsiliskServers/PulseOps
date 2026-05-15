@@ -12,13 +12,17 @@ import { registerCategoryRoutes } from "./routes/categories.js";
 import { registerServerRoutes } from "./routes/servers.js";
 import { registerTerminalRoutes } from "./routes/terminals.js";
 import { TerminalBroker } from "./services/terminal-broker.js";
+import { registerSecurityHooks } from "./lib/security.js";
 
 export async function buildApp(env: ServerEnv) {
   const app = Fastify({
     logger: true,
     trustProxy: true,
+    bodyLimit: 512 * 1024,
   });
   const terminalBroker = new TerminalBroker();
+
+  registerSecurityHooks(app, env);
 
   app.addHook("onClose", async () => {
     terminalBroker.dispose();
@@ -38,7 +42,9 @@ export async function buildApp(env: ServerEnv) {
       httpOnly: true,
       sameSite: "lax",
       path: env.appBasePath,
+      maxAge: 8 * 60 * 60 * 1000,
     },
+    rolling: true,
     saveUninitialized: false,
   });
 
