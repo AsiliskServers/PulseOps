@@ -147,6 +147,12 @@ STATE_FILE=$STATE_FILE
 EOF
 
 ENROLL_OUTPUT=""
+should_reenroll_from_check_failure() {
+  local output="$1"
+
+  [[ "$output" == *"unknown command"* ]] || [[ "$output" == *"<enroll|run>"* ]]
+}
+
 if [[ "$FORCE_REENROLL" == "true" && -s "$STATE_FILE" ]]; then
   echo "Force re-enroll requested, removing existing agent state."
   rm -f "$STATE_FILE"
@@ -168,6 +174,15 @@ if [[ -s "$STATE_FILE" ]]; then
     fi
 
     echo "Existing agent state is invalid or rejected by server, re-enrolling."
+    rm -f "$STATE_FILE"
+    ENROLL_OUTPUT="$("$INSTALL_DIR/$BIN_NAME" enroll --config "$ENV_FILE")"
+  elif should_reenroll_from_check_failure "$CHECK_OUTPUT"; then
+    if [[ -z "$ENROLLMENT_TOKEN" ]]; then
+      echo "Existing agent state needs re-enrollment, but --enrollment-token was not provided." >&2
+      exit 1
+    fi
+
+    echo "Existing agent binary does not support credential verification, forcing re-enroll."
     rm -f "$STATE_FILE"
     ENROLL_OUTPUT="$("$INSTALL_DIR/$BIN_NAME" enroll --config "$ENV_FILE")"
   else
