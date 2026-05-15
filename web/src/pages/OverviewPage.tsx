@@ -719,7 +719,7 @@ export function OverviewPage() {
 
   return (
     <>
-      <div className="page-column">
+      <div className="page-column overview-page">
         <section className="page-header panel">
           <div className="page-heading">
             <p className="section-kicker">Accueil</p>
@@ -777,4 +777,3 @@ export function OverviewPage() {
     </>
   );
 }
-

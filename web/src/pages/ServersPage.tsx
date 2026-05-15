@@ -314,7 +314,7 @@ export function ServersPage() {
     : "Liste detaillee, etat courant et acces rapide a chaque fiche.";
 
   return (
-    <div className="page-column">
+    <div className="page-column servers-page">
       <section className="page-header panel">
         <div className="page-heading">
           <p className="section-kicker">Parc</p>
@@ -334,7 +334,7 @@ export function ServersPage() {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel servers-panel">
         <div className="panel-header">
           <div>
             <p className="section-kicker">{selectedCategory ? "Categorie" : "Serveurs"}</p>

@@ -42,7 +42,7 @@ export function AgentsPage() {
     serversQuery.data?.filter((server) => server.connectivityStatus === "online").length ?? 0;
 
   return (
-    <div className="page-column">
+    <div className="page-column agents-page">
       <section className="page-header panel">
         <div className="page-heading">
           <p className="section-kicker">Agents</p>
